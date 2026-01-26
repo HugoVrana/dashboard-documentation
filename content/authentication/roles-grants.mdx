@@ -1,0 +1,214 @@
+# Roles & Grants
+
+## Role Management
+
+### Create Role
+
+```http
+POST /api/role/
+Content-Type: application/json
+```
+
+#### Request
+
+```json
+{
+  "name": "admin"
+}
+```
+
+#### Response `200 OK`
+
+```json
+{
+  "id": "507f1f77bcf86cd799439011",
+  "name": "admin",
+  "grants": []
+}
+```
+
+---
+
+### Add Grant to Role
+
+```http
+POST /api/role/grant
+Content-Type: application/json
+```
+
+#### Request
+
+```json
+{
+  "roleId": "507f1f77bcf86cd799439011",
+  "grantId": "507f1f77bcf86cd799439012"
+}
+```
+
+#### Response `200 OK`
+
+```json
+{
+  "id": "507f1f77bcf86cd799439011",
+  "name": "admin",
+  "grants": [
+    {
+      "id": "507f1f77bcf86cd799439012",
+      "name": "dashboard-invoices-read",
+      "description": "Read invoice data"
+    }
+  ]
+}
+```
+
+---
+
+### Remove Grant from Role
+
+```http
+DELETE /api/role/grant
+Content-Type: application/json
+```
+
+#### Request
+
+```json
+{
+  "roleId": "507f1f77bcf86cd799439011",
+  "grantId": "507f1f77bcf86cd799439012"
+}
+```
+
+#### Response `200 OK`
+
+```json
+1
+```
+
+Returns count of removed grants.
+
+---
+
+## Grant Management
+
+### Create Grant
+
+```http
+POST /api/grant/
+Content-Type: application/json
+```
+
+#### Request
+
+```json
+{
+  "name": "dashboard-invoices-read",
+  "description": "Permission to read invoice data"
+}
+```
+
+#### Response `200 OK`
+
+```json
+{
+  "id": "507f1f77bcf86cd799439012",
+  "name": "dashboard-invoices-read",
+  "description": "Permission to read invoice data"
+}
+```
+
+---
+
+## Standard Grants
+
+| Grant | Description |
+|-------|-------------|
+| `dashboard-customers-read` | Read customer data |
+| `dashboard-invoices-read` | Read invoice data |
+| `dashboard-invoices-create` | Create new invoices |
+| `dashboard-invoices-update` | Update existing invoices |
+| `dashboard-invoices-delete` | Delete invoices |
+| `dashboard-revenue-read` | Read revenue data |
+| `dashboard-users-read` | Read user data |
+| `dashboard-users-create` | Create/search users |
+
+---
+
+## Example Role Configurations
+
+### Admin Role
+
+Full access to all features.
+
+```json
+{
+  "name": "admin",
+  "grants": [
+    "dashboard-customers-read",
+    "dashboard-invoices-read",
+    "dashboard-invoices-create",
+    "dashboard-invoices-update",
+    "dashboard-invoices-delete",
+    "dashboard-revenue-read",
+    "dashboard-users-read",
+    "dashboard-users-create"
+  ]
+}
+```
+
+### Accountant Role
+
+Invoice and revenue management.
+
+```json
+{
+  "name": "accountant",
+  "grants": [
+    "dashboard-customers-read",
+    "dashboard-invoices-read",
+    "dashboard-invoices-create",
+    "dashboard-invoices-update",
+    "dashboard-revenue-read"
+  ]
+}
+```
+
+### Viewer Role
+
+Read-only access.
+
+```json
+{
+  "name": "viewer",
+  "grants": [
+    "dashboard-customers-read",
+    "dashboard-invoices-read",
+    "dashboard-revenue-read"
+  ]
+}
+```
+
+---
+
+## JWT Structure
+
+Access tokens contain user grants:
+
+```json
+{
+  "sub": "user@example.com",
+  "iat": 1704067200,
+  "exp": 1704070800,
+  "grants": [
+    "dashboard-invoices-read",
+    "dashboard-customers-read"
+  ]
+}
+```
+
+| Claim | Type | Description |
+|-------|------|-------------|
+| `sub` | string | User email |
+| `iat` | number | Issued at (Unix timestamp) |
+| `exp` | number | Expiration (Unix timestamp) |
+| `grants` | string[] | User permissions |

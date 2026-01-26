@@ -1,0 +1,289 @@
+# Components
+
+## Base Components
+
+Located in `app/ui/base/`, built on **Base UI** and **Radix UI** primitives.
+
+### Installation
+
+Install base components with shadcn wrapper:
+
+```bash
+npx shadcn@latest add <component-name>
+```
+
+### Available Components
+
+| Component | File | Description |
+|-----------|------|-------------|
+| Button | `button.tsx` | Primary button with variants |
+| Card | `card.tsx` | Container card |
+| Input | `input.tsx` | Text input field |
+| Label | `label.tsx` | Form label |
+| Select | `select.tsx` | Dropdown select |
+| Combobox | `combobox.tsx` | Searchable dropdown |
+| Badge | `badge.tsx` | Status badges |
+| Tabs | `tabs.tsx` | Tab navigation |
+| AlertDialog | `alert-dialog.tsx` | Confirmation dialogs |
+| DropdownMenu | `dropdown-menu.tsx` | Context menus |
+| NavigationMenu | `navigation-menu.tsx` | Navigation |
+| ScrollArea | `scroll-area.tsx` | Scrollable container |
+| Separator | `separator.tsx` | Visual divider |
+| Switch | `switch.tsx` | Toggle switch |
+| Textarea | `textarea.tsx` | Multi-line input |
+| Field | `field.tsx` | Form field wrapper |
+| InputGroup | `input-group.tsx` | Input with addons |
+
+### Button Example
+
+```tsx
+import { Button } from '@/app/ui/base/button';
+
+<Button variant="default">Primary</Button>
+<Button variant="secondary">Secondary</Button>
+<Button variant="destructive">Delete</Button>
+<Button variant="outline">Outline</Button>
+<Button variant="ghost">Ghost</Button>
+```
+
+### Card Example
+
+```tsx
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter
+} from '@/app/ui/base/card';
+
+<Card>
+  <CardHeader>
+    <CardTitle>Invoice</CardTitle>
+    <CardDescription>Invoice details</CardDescription>
+  </CardHeader>
+  <CardContent>
+    <p>Amount: $1,500.00</p>
+  </CardContent>
+  <CardFooter>
+    <Button>Pay Now</Button>
+  </CardFooter>
+</Card>
+```
+
+---
+
+## Custom Components
+
+Located in `app/ui/custom/`.
+
+### Dashboard Components
+
+#### Revenue Chart
+
+Monthly revenue visualization.
+
+```tsx
+// ui/custom/dashboard/revenueChart/
+import { RevenueChart } from '@/app/ui/custom/dashboard/revenueChart';
+
+<RevenueChart revenues={revenues} />
+```
+
+#### Latest Invoices
+
+Recent invoices list.
+
+```tsx
+// ui/custom/dashboard/latestInvoices/
+import { LatestInvoices } from '@/app/ui/custom/dashboard/latestInvoices';
+
+<LatestInvoices invoices={latestInvoices} />
+```
+
+#### Metric Cards
+
+Display key metrics.
+
+```tsx
+// ui/custom/dashboard/cards/
+import { Card } from '@/app/ui/custom/dashboard/cards';
+
+<Card
+  title="Total Revenue"
+  value="$45,231.89"
+  icon={<CurrencyIcon />}
+/>
+```
+
+---
+
+### Navigation Components
+
+#### Theme Toggle
+
+Light/dark mode switch.
+
+```tsx
+// ui/custom/navigation/themeToggle.tsx
+import { ThemeToggle } from '@/app/ui/custom/navigation/themeToggle';
+
+<ThemeToggle />
+```
+
+#### Side Navigation
+
+Dashboard sidebar.
+
+```tsx
+// ui/custom/navigation/
+import { SideNav } from '@/app/ui/custom/navigation/sideNav';
+
+<SideNav />
+```
+
+---
+
+### Auth Components
+
+#### Login Form
+
+Authentication form.
+
+```tsx
+// ui/custom/auth/
+import { LoginForm } from '@/app/ui/custom/auth/loginForm';
+
+<LoginForm />
+```
+
+---
+
+### Invoice Components
+
+#### Invoice Table
+
+Paginated invoice list.
+
+```tsx
+// ui/custom/invoices/table/
+import { InvoiceTable } from '@/app/ui/custom/invoices/table';
+
+<InvoiceTable
+  invoices={invoices}
+  currentPage={page}
+  totalPages={totalPages}
+/>
+```
+
+#### Create Form
+
+Invoice creation form.
+
+```tsx
+// ui/custom/invoices/
+import { CreateForm } from '@/app/ui/custom/invoices/createForm';
+
+<CreateForm customers={customers} />
+```
+
+#### Edit Form
+
+Invoice edit form.
+
+```tsx
+// ui/custom/invoices/
+import { EditForm } from '@/app/ui/custom/invoices/editForm';
+
+<EditForm invoice={invoice} customers={customers} />
+```
+
+---
+
+### Customer Components
+
+#### Customer Dropdown
+
+Customer selection dropdown.
+
+```tsx
+// ui/custom/customers/customerDropdown/
+import { CustomerDropdown } from '@/app/ui/custom/customers/customerDropdown';
+
+<CustomerDropdown
+  customers={customers}
+  selected={selectedId}
+  onSelect={handleSelect}
+/>
+```
+
+---
+
+### Skeleton Components
+
+Loading placeholders.
+
+```tsx
+// ui/custom/skeletons/
+import {
+  InvoiceTableSkeleton,
+  CardSkeleton,
+  RevenueChartSkeleton
+} from '@/app/ui/custom/skeletons';
+
+// Use in Suspense fallback
+<Suspense fallback={<InvoiceTableSkeleton />}>
+  <InvoiceTable />
+</Suspense>
+```
+
+---
+
+### Dev Overlay
+
+Development debugging tools.
+
+```tsx
+// ui/custom/devOverlay/
+import { ApiConfigOverlay } from '@/app/ui/custom/devOverlay/apiConfigOverlay';
+import { EnvOverlay } from '@/app/ui/custom/devOverlay/envOverlay';
+import { UserOverlay } from '@/app/ui/custom/devOverlay/userOverlay';
+```
+
+---
+
+## Component Patterns
+
+### Server vs Client Components
+
+```tsx
+// Server Component (default)
+export default async function ServerComponent() {
+  const data = await fetchData();
+  return <div>{data}</div>;
+}
+
+// Client Component
+'use client';
+export function ClientComponent() {
+  const [state, setState] = useState();
+  return <button onClick={() => setState()}>Click</button>;
+}
+```
+
+### Form Actions
+
+```tsx
+// Server Action
+async function createInvoice(formData: FormData) {
+  'use server';
+  // Handle form submission
+}
+
+// In component
+<form action={createInvoice}>
+  <input name="amount" type="number" />
+  <button type="submit">Create</button>
+</form>
+```

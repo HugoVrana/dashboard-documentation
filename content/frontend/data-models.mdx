@@ -1,0 +1,278 @@
+# Data Models
+
+TypeScript types defined in `app/models/`.
+
+## Invoice Types
+
+### InvoiceRead
+
+```typescript
+// models/invoice/invoiceRead.ts
+type InvoiceRead = {
+  id: string;
+  amount: number;
+  date: string;
+  status: 'pending' | 'paid';
+  customer: CustomerRead;
+}
+```
+
+### InvoiceCreate
+
+```typescript
+// models/invoice/invoiceCreate.ts
+type InvoiceCreate = {
+  status: string;
+  amount: number;
+  customer_id: string;
+}
+```
+
+### InvoiceUpdate
+
+```typescript
+// models/invoice/invoiceUpdate.ts
+type InvoiceUpdate = {
+  status: string;
+  amount: number;
+  customer_id: string;
+}
+```
+
+### InvoiceForm
+
+```typescript
+// models/invoice/invoiceForm.ts
+type InvoiceForm = {
+  id: string;
+  customer_id: string;
+  amount: number;
+  status: 'pending' | 'paid';
+}
+```
+
+---
+
+## Customer Types
+
+### CustomerRead
+
+```typescript
+// models/customer/customerRead.ts
+type CustomerRead = {
+  id: string;
+  name: string;
+  email: string;
+  image_url: string;
+}
+```
+
+### CustomerField
+
+Simplified type for dropdowns.
+
+```typescript
+// models/customer/customerField.ts
+type CustomerField = {
+  id: string;
+  name: string;
+}
+```
+
+### FormattedCustomersTable
+
+```typescript
+// models/customer/formattedCustomersTable.ts
+type FormattedCustomersTable = {
+  id: string;
+  name: string;
+  email: string;
+  image_url: string;
+  total_invoices: number;
+  total_pending: string;
+  total_paid: string;
+}
+```
+
+---
+
+## Auth Types
+
+### AuthResponse
+
+```typescript
+// models/auth/authResponse.ts
+type AuthResponse = {
+  accessToken: string;
+  refreshToken: string;
+  user: UserInfo;
+}
+```
+
+### UserInfo
+
+```typescript
+// models/auth/userInfo.ts
+type UserInfo = {
+  id: string;
+  email: string;
+  roles: Role[];
+}
+```
+
+### Role
+
+```typescript
+// models/auth/role.ts
+type Role = {
+  id: string;
+  name: string;
+  grants: Grant[];
+}
+```
+
+### Grant
+
+```typescript
+// models/auth/grant.ts
+type Grant = {
+  id: string;
+  name: string;
+  description: string;
+}
+```
+
+### LoginRequest
+
+```typescript
+// models/auth/loginRequest.ts
+type LoginRequest = {
+  email: string;
+  password: string;
+}
+```
+
+### RegisterRequest
+
+```typescript
+// models/auth/registerRequest.ts
+type RegisterRequest = {
+  email: string;
+  password: string;
+  roleId: string;
+}
+```
+
+### RefreshTokenRequest
+
+```typescript
+// models/auth/refreshTokenRequest.ts
+type RefreshTokenRequest = {
+  refreshToken: string;
+}
+```
+
+---
+
+## Pagination Types
+
+### PageRequest
+
+```typescript
+// models/page/pageRequest.ts
+type PageRequest = {
+  page?: number;
+  size?: number;
+  search?: string;
+  sort?: string;
+  order?: string;
+}
+```
+
+### PageResponse
+
+```typescript
+// models/page/pageResponse.ts
+type PageResponse<T> = {
+  data: T[];
+  totalPages: number;
+  currentPage: number;
+  itemsPerPage: number;
+}
+```
+
+---
+
+## Revenue Types
+
+### RevenueRead
+
+```typescript
+// models/revenue/revenueRead.ts
+type RevenueRead = {
+  id: string;
+  month: string;
+  revenue: number;
+}
+```
+
+---
+
+## User Types
+
+### UserRead
+
+```typescript
+// models/user/userRead.ts
+type UserRead = {
+  id: string;
+  name: string;
+  email: string;
+}
+```
+
+---
+
+## State Types
+
+### State
+
+Form action state type.
+
+```typescript
+// models/state.ts
+type State = {
+  errors?: {
+    customerId?: string[];
+    amount?: string[];
+    status?: string[];
+  };
+  message?: string | null;
+}
+```
+
+---
+
+## Log Types
+
+### LogCreate
+
+```typescript
+// models/log/logCreate.ts
+type LogCreate = {
+  level: string;
+  message: string;
+  timestamp: string;
+  labels: Record<string, string>;
+}
+```
+
+### LokiStream
+
+```typescript
+// models/log/lokiStream.ts
+type LokiStream = {
+  stream: Record<string, string>;
+  values: [string, string][];
+}
+```

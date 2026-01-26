@@ -1,0 +1,62 @@
+# Database Overview
+
+The Dashboard application uses **MongoDB** as its primary database. Data is split across two services with their own databases.
+
+## Database Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      MongoDB Cluster                             │
+│                                                                  │
+│  ┌─────────────────────────┐    ┌─────────────────────────┐     │
+│  │   dashboard_db          │    │    oauth_db             │     │
+│  │                         │    │                         │     │
+│  │  ┌─────────────────┐   │    │  ┌─────────────────┐    │     │
+│  │  │   customers     │   │    │  │     users       │    │     │
+│  │  └─────────────────┘   │    │  └─────────────────┘    │     │
+│  │  ┌─────────────────┐   │    │  ┌─────────────────┐    │     │
+│  │  │   invoices      │   │    │  │     roles       │    │     │
+│  │  └─────────────────┘   │    │  └─────────────────┘    │     │
+│  │  ┌─────────────────┐   │    │  ┌─────────────────┐    │     │
+│  │  │   revenues      │   │    │  │     grants      │    │     │
+│  │  └─────────────────┘   │    │  └─────────────────┘    │     │
+│  │  ┌─────────────────┐   │    │  ┌─────────────────┐    │     │
+│  │  │    users        │   │    │  │ refresh_tokens  │    │     │
+│  │  └─────────────────┘   │    │  └─────────────────┘    │     │
+│  └─────────────────────────┘    └─────────────────────────┘     │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## Collections Summary
+
+### Dashboard Service
+
+| Collection | Description | Records |
+|------------|-------------|---------|
+| `customers` | Customer information | Variable |
+| `invoices` | Invoice records | Variable |
+| `revenues` | Monthly revenue data | 12 per year |
+| `users` | User accounts | Variable |
+
+### OAuth Service
+
+| Collection | Description | Records |
+|------------|-------------|---------|
+| `users` | Authentication accounts | Variable |
+| `roles` | Role definitions | Few |
+| `grants` | Permission definitions | ~10-20 |
+| `refresh_tokens` | Active refresh tokens | Variable |
+| `email_send_attempts` | Email history | Variable |
+
+## Key Features
+
+- **Soft Deletes**: Uses `audit.deletedAt` field
+- **Audit Trail**: All entities have `audit` subdocument
+- **References**: Uses MongoDB `DBRef` for relationships
+- **Indexes**: Unique indexes on email, role names, grant names
+
+## Quick Links
+
+- [Dashboard Collections](/database/dashboard-collections)
+- [OAuth Collections](/database/oauth-collections)
+- [Shared Models](/database/shared-models)

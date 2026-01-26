@@ -1,0 +1,88 @@
+# Customers API
+
+Endpoints for managing customer data.
+
+**Required Grant**: `dashboard-customers-read`
+
+## Get All Customers
+
+Retrieves a list of all customers.
+
+```http
+GET /customers/
+```
+
+### Response
+
+```json
+[
+  {
+    "id": "507f1f77bcf86cd799439011",
+    "name": "John Doe",
+    "email": "john@example.com",
+    "image_url": "/customers/john-doe.png"
+  }
+]
+```
+
+### TypeScript Type
+
+```typescript
+type CustomerRead = {
+  id: string;
+  name: string;
+  email: string;
+  image_url: string;
+}
+```
+
+---
+
+## Get Customer by ID
+
+Retrieves a single customer by their ID.
+
+```http
+GET /customers/{id}
+```
+
+### Path Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | string | 24-character hex ObjectId |
+
+### Response
+
+```json
+{
+  "id": "507f1f77bcf86cd799439011",
+  "name": "John Doe",
+  "email": "john@example.com",
+  "image_url": "/customers/john-doe.png"
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| `404` | Customer not found or invalid ID |
+
+---
+
+## Get Customer Count
+
+Returns the total number of customers.
+
+```http
+GET /customers/count
+```
+
+### Response
+
+```json
+42
+```
+
+Returns a plain integer representing the count.

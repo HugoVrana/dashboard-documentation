@@ -1,0 +1,308 @@
+# Data Access Layer
+
+Server-side API clients in `app/lib/dataAccess/`.
+
+## Architecture
+
+```
+┌────────────────┐     ┌─────────────────┐     ┌─────────────┐
+│  Server        │────►│  Data Access    │────►│  Backend    │
+│  Component     │     │  Client         │     │  API        │
+└────────────────┘     └─────────────────┘     └─────────────┘
+```
+
+All API calls are made server-side using the access token from the session.
+
+---
+
+## Invoice Client
+
+```typescript
+// lib/dataAccess/invoiceServerClient.ts
+
+// Get all invoices
+export async function getAllInvoices(
+  token: string
+): Promise<InvoiceRead[]>
+
+// Get invoice by ID
+export async function getInvoiceById(
+  id: string,
+  token: string
+): Promise<InvoiceRead>
+
+// Get latest invoices
+export async function getLatestInvoices(
+  token: string,
+  from?: number,
+  to?: number
+): Promise<InvoiceRead[]>
+
+// Get invoice count
+export async function getInvoiceCount(
+  token: string,
+  status?: string
+): Promise<number>
+
+// Get invoice amount total
+export async function getInvoiceAmount(
+  token: string,
+  status?: string
+): Promise<number>
+
+// Get total pages
+export async function getInvoicePages(
+  token: string,
+  searchTerm?: string,
+  size?: number
+): Promise<number>
+
+// Search invoices with pagination
+export async function searchInvoices(
+  request: PageRequest,
+  token: string
+): Promise<PageResponse<InvoiceRead>>
+
+// Create invoice
+export async function createInvoice(
+  invoice: InvoiceCreate,
+  token: string
+): Promise<InvoiceRead>
+
+// Update invoice
+export async function updateInvoice(
+  id: string,
+  invoice: InvoiceUpdate,
+  token: string
+): Promise<InvoiceRead>
+
+// Delete invoice
+export async function deleteInvoice(
+  id: string,
+  token: string
+): Promise<void>
+```
+
+### Usage Example
+
+```typescript
+import { searchInvoices } from '@/app/lib/dataAccess/invoiceServerClient';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+
+export default async function InvoicesPage({
+  searchParams
+}: {
+  searchParams: { page?: string; query?: string }
+}) {
+  const session = await getServerSession(authOptions);
+  const page = Number(searchParams.page) || 1;
+  const query = searchParams.query || '';
+
+  const result = await searchInvoices(
+    { page, size: 10, search: query },
+    session.accessToken
+  );
+
+  return (
+    <InvoiceTable
+      invoices={result.data}
+      totalPages={result.totalPages}
+      currentPage={result.currentPage}
+    />
+  );
+}
+```
+
+---
+
+## Customer Client
+
+```typescript
+// Customers are typically fetched via invoice client
+// or a dedicated customersServerClient.ts
+
+export async function getAllCustomers(
+  token: string
+): Promise<CustomerRead[]>
+
+export async function getCustomerById(
+  id: string,
+  token: string
+): Promise<CustomerRead>
+
+export async function getCustomerCount(
+  token: string
+): Promise<number>
+```
+
+---
+
+## Revenue Client
+
+```typescript
+// lib/dataAccess/revenueServerClient.ts (or similar)
+
+export async function getAllRevenues(
+  token: string
+): Promise<RevenueRead[]>
+```
+
+### Usage
+
+```typescript
+const revenues = await getAllRevenues(session.accessToken);
+
+// Transform for chart
+const chartData = revenues.map(r => ({
+  month: r.month,
+  revenue: r.revenue
+}));
+```
+
+---
+
+## Users Client
+
+```typescript
+// lib/dataAccess/usersServerClient.ts
+
+export async function getAllUsers(
+  token: string
+): Promise<UserRead[]>
+
+export async function getUserById(
+  id: string,
+  token: string
+): Promise<UserRead>
+
+export async function getUserByEmail(
+  email: string,
+  token: string
+): Promise<UserRead>
+
+export async function searchUsers(
+  request: PageRequest,
+  token: string
+): Promise<PageResponse<UserRead>>
+```
+
+---
+
+## Grafana Client
+
+For Loki logging integration.
+
+```typescript
+// lib/dataAccess/grafanaClient.ts
+
+export async function pushLogs(
+  streams: LokiStream[]
+): Promise<void>
+
+// lib/dataAccess/grafanaServerClient.ts
+// Server-side Grafana operations
+```
+
+---
+
+## Permission Client
+
+```typescript
+// lib/permission/permissionsServerClient.ts
+
+export async function hasGrant(
+  grantName: string
+): Promise<boolean>
+
+export async function getUserGrants(): Promise<string[]>
+```
+
+### Usage
+
+```typescript
+import { hasGrant } from '@/app/lib/permission/permissionsServerClient';
+
+export default async function InvoicesPage() {
+  const canCreate = await hasGrant('dashboard-invoices-create');
+  const canDelete = await hasGrant('dashboard-invoices-delete');
+
+  return (
+    <div>
+      {canCreate && <CreateButton />}
+      <InvoiceTable canDelete={canDelete} />
+    </div>
+  );
+}
+```
+
+---
+
+## Type Validators
+
+Runtime type validation in `app/typeValidators/`.
+
+```typescript
+// typeValidators/invoiceValidator.ts
+
+export function validateInvoiceRead(data: unknown): InvoiceRead {
+  // Validate shape and return typed data
+  // Throws if invalid
+}
+
+export function isInvoiceRead(data: unknown): data is InvoiceRead {
+  // Type guard - returns boolean
+}
+
+export function validateInvoiceArray(data: unknown): InvoiceRead[] {
+  // Validate array of invoices
+}
+```
+
+### Available Validators
+
+| File | Types |
+|------|-------|
+| `invoiceValidator.ts` | InvoiceRead, InvoiceCreate |
+| `customerValidator.ts` | CustomerRead |
+| `revenueValidator.ts` | RevenueRead |
+| `userValidator.ts` | UserRead |
+| `authResponseValidator.ts` | AuthResponse |
+| `roleValidator.ts` | Role |
+| `grantValidator.ts` | Grant |
+| `userInfoValidator.ts` | UserInfo |
+| `pageResponseValidator.ts` | PageResponse |
+| `logValidator.ts` | LogCreate |
+
+---
+
+## Error Handling
+
+```typescript
+async function fetchWithAuth<T>(
+  url: string,
+  token: string
+): Promise<T> {
+  const response = await fetch(url, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error('Unauthorized');
+    }
+    if (response.status === 403) {
+      throw new Error('Forbidden');
+    }
+    if (response.status === 404) {
+      throw new Error('Not Found');
+    }
+    throw new Error(`HTTP ${response.status}`);
+  }
+
+  return response.json();
+}
+```

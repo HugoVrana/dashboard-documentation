@@ -1,0 +1,64 @@
+# Revenues API
+
+Endpoints for retrieving revenue data.
+
+## Get All Revenues
+
+Retrieves monthly revenue data for chart visualization.
+
+**Required Grant**: `dashboard-revenue-read`
+
+```http
+GET /revenues/
+```
+
+### Response
+
+```json
+[
+  {
+    "id": "507f1f77bcf86cd799439011",
+    "month": "Jan",
+    "revenue": 15000.00
+  },
+  {
+    "id": "507f1f77bcf86cd799439012",
+    "month": "Feb",
+    "revenue": 18500.00
+  },
+  {
+    "id": "507f1f77bcf86cd799439013",
+    "month": "Mar",
+    "revenue": 22000.00
+  }
+]
+```
+
+### TypeScript Type
+
+```typescript
+type RevenueRead = {
+  id: string;
+  month: string;
+  revenue: number;
+}
+```
+
+## Usage
+
+Revenue data is typically used to render charts on the dashboard overview page, showing monthly revenue trends.
+
+```typescript
+// Example: Fetching revenues for chart
+const revenues = await fetch('/revenues/', {
+  headers: {
+    'Authorization': `Bearer ${token}`
+  }
+}).then(res => res.json());
+
+// Transform for chart library
+const chartData = revenues.map(r => ({
+  label: r.month,
+  value: r.revenue
+}));
+```

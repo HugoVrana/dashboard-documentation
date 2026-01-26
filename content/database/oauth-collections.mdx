@@ -1,0 +1,196 @@
+# OAuth Collections
+
+Collections used by the OAuth authentication service.
+
+## users
+
+Stores user authentication information.
+
+```typescript
+{
+  _id: ObjectId,
+  email: string,              // unique index
+  password: string,           // BCrypt hashed
+  emailVerified: Boolean,
+  emailVerifiedAt: LocalDateTime,
+  emailVerificationToken: VerificationToken,
+  passwordResetToken: VerificationToken,
+  roles: DBRef<Role>[],
+  audit: Audit
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `_id` | ObjectId | Yes | Primary key |
+| `email` | string | Yes | Unique email address |
+| `password` | string | Yes | BCrypt hashed password |
+| `emailVerified` | Boolean | Yes | Verification status |
+| `emailVerifiedAt` | DateTime | No | Verification timestamp |
+| `emailVerificationToken` | Token | No | Pending verification |
+| `passwordResetToken` | Token | No | Pending reset |
+| `roles` | DBRef[] | Yes | Assigned roles |
+| `audit` | Audit | Yes | Timestamps |
+
+### Example Document
+
+```json
+{
+  "_id": { "$oid": "507f1f77bcf86cd799439015" },
+  "email": "user@example.com",
+  "password": "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZRGdjGj/n6F...",
+  "emailVerified": true,
+  "emailVerifiedAt": { "$date": "2024-01-15T12:00:00Z" },
+  "emailVerificationToken": null,
+  "passwordResetToken": null,
+  "roles": [
+    {
+      "$ref": "roles",
+      "$id": { "$oid": "507f1f77bcf86cd799439016" }
+    }
+  ],
+  "audit": {
+    "createdAt": { "$date": "2024-01-15T10:00:00Z" },
+    "updatedAt": { "$date": "2024-01-15T12:00:00Z" },
+    "deletedAt": null
+  }
+}
+```
+
+---
+
+## roles
+
+Stores role definitions with grant references.
+
+```typescript
+{
+  _id: ObjectId,
+  name: string,           // unique index
+  grants: DBRef<Grant>[],
+  audit: Audit
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `_id` | ObjectId | Yes | Primary key |
+| `name` | string | Yes | Unique role name |
+| `grants` | DBRef[] | Yes | Assigned permissions |
+| `audit` | Audit | Yes | Timestamps |
+
+### Example Document
+
+```json
+{
+  "_id": { "$oid": "507f1f77bcf86cd799439016" },
+  "name": "admin",
+  "grants": [
+    { "$ref": "grants", "$id": { "$oid": "507f1f77bcf86cd799439017" } },
+    { "$ref": "grants", "$id": { "$oid": "507f1f77bcf86cd799439018" } }
+  ],
+  "audit": {
+    "createdAt": { "$date": "2024-01-01T00:00:00Z" },
+    "updatedAt": { "$date": "2024-01-10T15:30:00Z" },
+    "deletedAt": null
+  }
+}
+```
+
+---
+
+## grants
+
+Stores individual permission definitions.
+
+```typescript
+{
+  _id: ObjectId,
+  name: string,           // unique index
+  description: string,
+  audit: Audit
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `_id` | ObjectId | Yes | Primary key |
+| `name` | string | Yes | Unique permission name |
+| `description` | string | No | Human-readable description |
+| `audit` | Audit | Yes | Timestamps |
+
+### Example Document
+
+```json
+{
+  "_id": { "$oid": "507f1f77bcf86cd799439017" },
+  "name": "dashboard-invoices-read",
+  "description": "Permission to read invoice data",
+  "audit": {
+    "createdAt": { "$date": "2024-01-01T00:00:00Z" },
+    "updatedAt": { "$date": "2024-01-01T00:00:00Z" },
+    "deletedAt": null
+  }
+}
+```
+
+### Standard Grants
+
+| Grant Name | Description |
+|------------|-------------|
+| `dashboard-customers-read` | Read customer data |
+| `dashboard-invoices-read` | Read invoice data |
+| `dashboard-invoices-create` | Create invoices |
+| `dashboard-invoices-update` | Update invoices |
+| `dashboard-invoices-delete` | Delete invoices |
+| `dashboard-revenue-read` | Read revenue data |
+| `dashboard-users-read` | Read user data |
+| `dashboard-users-create` | Create/search users |
+
+---
+
+## refresh_tokens
+
+Stores active refresh tokens for token rotation.
+
+```typescript
+{
+  _id: ObjectId,
+  token: string,
+  userId: ObjectId,
+  expiresAt: Instant,
+  createdAt: Instant
+}
+```
+
+---
+
+## email_send_attempts
+
+Tracks email sending history for verification and password reset.
+
+```typescript
+{
+  _id: ObjectId,
+  userId: ObjectId,
+  emailType: EmailType,
+  status: EmailSendStatus,
+  sentAt: Instant,
+  error: string
+}
+```
+
+### Email Types
+
+| Type | Description |
+|------|-------------|
+| `VERIFICATION` | Email verification |
+| `PASSWORD_RESET` | Password reset |
+
+### Email Status
+
+| Status | Description |
+|--------|-------------|
+| `PENDING` | Queued for sending |
+| `SENT` | Successfully sent |
+| `FAILED` | Send failed |

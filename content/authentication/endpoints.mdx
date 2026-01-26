@@ -1,0 +1,249 @@
+# Auth Endpoints
+
+Base URL: `/api/auth`
+
+## Register
+
+Creates a new user account.
+
+```http
+POST /api/auth/register
+Content-Type: application/json
+```
+
+### Request
+
+```json
+{
+  "email": "user@example.com",
+  "password": "securePassword123",
+  "roleId": "507f1f77bcf86cd799439011"
+}
+```
+
+### Response `201 Created`
+
+```json
+{
+  "id": "507f1f77bcf86cd799439012",
+  "email": "user@example.com",
+  "roleReads": [
+    {
+      "id": "507f1f77bcf86cd799439011",
+      "name": "user",
+      "grants": [
+        {
+          "id": "507f1f77bcf86cd799439013",
+          "name": "dashboard-invoices-read",
+          "description": "Read invoice data"
+        }
+      ]
+    }
+  ]
+}
+```
+
+---
+
+## Login
+
+Authenticates a user and returns tokens.
+
+```http
+POST /api/auth/login
+Content-Type: application/json
+```
+
+### Request
+
+```json
+{
+  "email": "user@example.com",
+  "password": "securePassword123"
+}
+```
+
+### Response `200 OK`
+
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refreshToken": "dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4...",
+  "user": {
+    "id": "507f1f77bcf86cd799439012",
+    "email": "user@example.com",
+    "roleReads": [...]
+  }
+}
+```
+
+---
+
+## Refresh Token
+
+Exchanges a refresh token for new tokens.
+
+```http
+POST /api/auth/refresh
+Content-Type: application/json
+```
+
+### Request
+
+```json
+{
+  "refreshToken": "dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4..."
+}
+```
+
+### Response `200 OK`
+
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refreshToken": "bmV3IHJlZnJlc2ggdG9rZW4..."
+}
+```
+
+> **Note**: The old refresh token is invalidated (rotation).
+
+---
+
+## Logout
+
+Invalidates the user's refresh tokens.
+
+```http
+POST /api/auth/logout
+Authorization: Bearer <access_token>
+```
+
+### Response `200 OK`
+
+No body.
+
+---
+
+## Get Current User
+
+Returns the authenticated user's information.
+
+```http
+GET /api/auth/me
+Authorization: Bearer <access_token>
+```
+
+### Response `200 OK`
+
+```json
+{
+  "id": "507f1f77bcf86cd799439012",
+  "email": "user@example.com",
+  "roleReads": [...]
+}
+```
+
+---
+
+## Verify Email
+
+Verifies the user's email address.
+
+```http
+POST /api/auth/verify-email?token=verification_token_here
+```
+
+### Response `200 OK`
+
+No body.
+
+---
+
+## Forgot Password
+
+Initiates the password reset flow.
+
+```http
+POST /api/auth/forgot-password
+Content-Type: application/json
+```
+
+### Request
+
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+### Response `200 OK`
+
+No body. Email sent if user exists.
+
+---
+
+## Reset Password
+
+Resets the user's password.
+
+```http
+POST /api/auth/reset-password
+Content-Type: application/json
+```
+
+### Request
+
+```json
+{
+  "token": "password_reset_token",
+  "newPassword": "newSecurePassword456"
+}
+```
+
+### Response `200 OK`
+
+No body.
+
+---
+
+## Add Role to User
+
+Assigns an additional role to a user.
+
+```http
+POST /api/auth/user/role
+Content-Type: application/json
+```
+
+### Request
+
+```json
+{
+  "userId": "507f1f77bcf86cd799439012",
+  "roleId": "507f1f77bcf86cd799439011"
+}
+```
+
+### Response `200 OK`
+
+```json
+{
+  "user": {
+    "id": "507f1f77bcf86cd799439012",
+    "email": "user@example.com",
+    "roleReads": [...]
+  }
+}
+```
+
+---
+
+## Error Responses
+
+| Code | Description |
+|------|-------------|
+| `400` | Invalid request data |
+| `401` | Invalid credentials |
+| `404` | User/Role not found |
+| `409` | User already exists |
+| `500` | Server error |

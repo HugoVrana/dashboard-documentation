@@ -1,0 +1,142 @@
+# Security Architecture
+
+## Permission Model
+
+The application uses a hierarchical permission model:
+
+```
+User ──┬── Role ──┬── Grant
+       │          │
+       └── Role ──┴── Grant
+```
+
+- **Users** can have multiple **Roles**
+- **Roles** contain multiple **Grants**
+- **Grants** are individual permissions
+
+## Grants (Permissions)
+
+| Grant | Description |
+|-------|-------------|
+| `dashboard-customers-read` | Read customer data |
+| `dashboard-invoices-read` | Read invoice data |
+| `dashboard-invoices-create` | Create new invoices |
+| `dashboard-invoices-update` | Update existing invoices |
+| `dashboard-invoices-delete` | Delete invoices (soft delete) |
+| `dashboard-revenue-read` | Read revenue data |
+| `dashboard-users-read` | Read user data |
+| `dashboard-users-create` | Create users / search |
+
+## Example Roles
+
+### Admin Role
+```json
+{
+  "name": "admin",
+  "grants": [
+    "dashboard-customers-read",
+    "dashboard-invoices-read",
+    "dashboard-invoices-create",
+    "dashboard-invoices-update",
+    "dashboard-invoices-delete",
+    "dashboard-revenue-read",
+    "dashboard-users-read",
+    "dashboard-users-create"
+  ]
+}
+```
+
+### Viewer Role
+```json
+{
+  "name": "viewer",
+  "grants": [
+    "dashboard-customers-read",
+    "dashboard-invoices-read",
+    "dashboard-revenue-read"
+  ]
+}
+```
+
+## JWT Structure
+
+```json
+{
+  "sub": "user@example.com",
+  "iat": 1704067200,
+  "exp": 1704070800,
+  "grants": [
+    "dashboard-invoices-read",
+    "dashboard-customers-read"
+  ]
+}
+```
+
+| Claim | Description |
+|-------|-------------|
+| `sub` | User email (subject) |
+| `iat` | Issued at timestamp |
+| `exp` | Expiration timestamp |
+| `grants` | Array of permission names |
+
+## Backend Security
+
+### Spring Security Configuration
+
+```java
+@Configuration
+@EnableMethodSecurity
+public class SecurityConfig {
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) {
+        return http
+            .csrf(csrf -> csrf.disable())
+            .cors(Customizer.withDefaults())
+            .sessionManagement(session ->
+                session.sessionCreationPolicy(STATELESS))
+            .addFilterBefore(jwtFilter,
+                UsernamePasswordAuthenticationFilter.class)
+            .authorizeHttpRequests(auth -> auth
+                .anyRequest().authenticated())
+            .build();
+    }
+}
+```
+
+### Method-Level Authorization
+
+```java
+@GetMapping("/")
+@PreAuthorize("hasAuthority('dashboard-invoices-read')")
+public ResponseEntity<List<InvoiceRead>> getAllInvoices() {
+    // Only users with 'dashboard-invoices-read' grant can access
+}
+```
+
+## Password Security
+
+- **Hashing**: BCrypt with default strength (10 rounds)
+- **Storage**: Only hashed passwords stored
+- **Validation**: Comparison via BCrypt's checkpw
+
+## Token Security
+
+### Access Tokens
+- Short-lived (configurable, typically 15-60 minutes)
+- Stateless validation via signature
+- Contains user grants for authorization
+
+### Refresh Tokens
+- Longer-lived (configurable, typically 7-30 days)
+- Stored in database for revocation capability
+- Rotation on each use (old token invalidated)
+
+## Security Best Practices
+
+1. **HTTPS**: Always use HTTPS in production
+2. **CORS**: Configure allowed origins
+3. **Token Storage**: Use httpOnly cookies
+4. **Input Validation**: Validate all user input
+5. **Rate Limiting**: Protect against brute force
+6. **Audit Logging**: Log security events

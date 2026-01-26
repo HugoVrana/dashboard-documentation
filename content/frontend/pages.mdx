@@ -1,0 +1,204 @@
+# Pages & Routes
+
+## Route Structure
+
+```
+app/
+├── page.tsx                    # / (redirect to dashboard)
+├── auth/
+│   ├── login/page.tsx          # /auth/login
+│   └── unauthorized/page.tsx   # /auth/unauthorized
+└── dashboard/
+    ├── (overview)/
+    │   └── page.tsx            # /dashboard
+    ├── invoices/
+    │   ├── page.tsx            # /dashboard/invoices
+    │   ├── create/page.tsx     # /dashboard/invoices/create
+    │   └── [id]/
+    │       └── edit/page.tsx   # /dashboard/invoices/:id/edit
+    └── customers/
+        └── page.tsx            # /dashboard/customers
+```
+
+## Dashboard Overview
+
+**Route**: `/dashboard`
+
+The main dashboard page displaying key metrics and recent activity.
+
+### Features
+- Total revenue card
+- Pending invoices count
+- Paid invoices count
+- Customer count
+- Revenue chart (monthly)
+- Latest invoices list
+
+### Screenshot Areas
+```
+┌─────────────────────────────────────────────────────┐
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐  │
+│  │ Revenue │ │ Pending │ │  Paid   │ │Customers│  │
+│  │  Card   │ │  Card   │ │  Card   │ │  Card   │  │
+│  └─────────┘ └─────────┘ └─────────┘ └─────────┘  │
+│                                                     │
+│  ┌─────────────────────┐ ┌───────────────────────┐ │
+│  │                     │ │                       │ │
+│  │   Revenue Chart     │ │   Latest Invoices    │ │
+│  │     (Monthly)       │ │       List           │ │
+│  │                     │ │                       │ │
+│  └─────────────────────┘ └───────────────────────┘ │
+└─────────────────────────────────────────────────────┘
+```
+
+---
+
+## Invoices List
+
+**Route**: `/dashboard/invoices`
+
+Paginated invoice management page.
+
+### Features
+- Search functionality (Elasticsearch)
+- Pagination controls
+- Status badges (pending/paid)
+- Action buttons (edit, delete)
+- Create invoice button
+
+### Query Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `page` | number | Current page (default: 1) |
+| `query` | string | Search term |
+
+---
+
+## Create Invoice
+
+**Route**: `/dashboard/invoices/create`
+
+Form to create new invoices.
+
+### Form Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| Customer | Select | Yes | Customer dropdown |
+| Amount | Number | Yes | Invoice amount |
+| Status | Select | Yes | pending / paid |
+
+### Validation
+- Customer must be selected
+- Amount must be positive number
+- Status required
+
+---
+
+## Edit Invoice
+
+**Route**: `/dashboard/invoices/[id]/edit`
+
+Form to edit existing invoices.
+
+### Dynamic Segment
+- `[id]` - Invoice ObjectId
+
+### Features
+- Pre-filled form data
+- Same validation as create
+- Update button
+
+---
+
+## Customers
+
+**Route**: `/dashboard/customers`
+
+Customer list display.
+
+### Features
+- Customer cards with avatars
+- Email display
+- Invoice count per customer
+
+---
+
+## Login
+
+**Route**: `/auth/login`
+
+Authentication page.
+
+### Form Fields
+
+| Field | Type | Required |
+|-------|------|----------|
+| Email | Email | Yes |
+| Password | Password | Yes |
+
+### Features
+- Form validation
+- Error messages
+- Redirect after login
+
+---
+
+## Unauthorized
+
+**Route**: `/auth/unauthorized`
+
+Access denied page shown when user lacks permissions.
+
+### Features
+- Error message
+- Back to dashboard link
+- Login link
+
+---
+
+## Layouts
+
+### Root Layout
+Applied to all pages:
+- HTML structure
+- Theme provider
+- Font loading
+
+### Dashboard Layout
+Applied to `/dashboard/*`:
+- Side navigation
+- Header with user menu
+- Theme toggle
+
+---
+
+## Route Protection
+
+Routes are protected via middleware and server-side checks:
+
+```typescript
+// middleware.ts
+export { default } from 'next-auth/middleware';
+
+export const config = {
+  matcher: ['/dashboard/:path*']
+};
+```
+
+```typescript
+// In page component
+import { getServerSession } from 'next-auth';
+import { redirect } from 'next/navigation';
+
+export default async function ProtectedPage() {
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    redirect('/auth/login');
+  }
+
+  return <PageContent />;
+}
+```

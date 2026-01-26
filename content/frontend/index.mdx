@@ -1,0 +1,80 @@
+# Frontend Overview
+
+The frontend is built with **Next.js 15** using the App Router, **React 19**, **TypeScript**, and **Tailwind CSS**.
+
+## Project Structure
+
+```
+nextjs-dashboard-frontend/
+├── app/
+│   ├── api/                    # API routes
+│   │   ├── auth/[...nextauth]/ # NextAuth
+│   │   └── loki/               # Logging proxy
+│   ├── auth/                   # Auth pages
+│   │   ├── login/
+│   │   └── unauthorized/
+│   ├── dashboard/              # Dashboard pages
+│   │   ├── (overview)/
+│   │   ├── invoices/
+│   │   └── customers/
+│   ├── lib/                    # Utilities
+│   │   ├── dataAccess/         # API clients
+│   │   ├── permission/         # Auth utilities
+│   │   └── theme/              # Theme context
+│   ├── models/                 # TypeScript types
+│   ├── typeValidators/         # Runtime validation
+│   ├── translations/           # i18n
+│   └── ui/                     # Components
+│       ├── base/               # Base components
+│       └── custom/             # Feature components
+├── public/
+│   └── customers/              # Static assets
+└── next.config.ts
+```
+
+## Key Features
+
+- **Server Components** - Default React Server Components
+- **App Router** - Next.js 15 file-based routing
+- **Type Safety** - Full TypeScript coverage
+- **Theming** - Light/dark mode support
+- **i18n** - Internationalization via next-intl
+- **Auth** - NextAuth.js integration
+
+## Quick Links
+
+- [Pages & Routes](/frontend/pages) - Application pages
+- [Data Models](/frontend/data-models) - TypeScript types
+- [Components](/frontend/components) - UI components
+- [Data Access](/frontend/data-access) - API client layer
+
+## Environment Variables
+
+```env
+# API URLs
+NEXT_PUBLIC_API_URL=http://localhost:8080
+NEXT_PUBLIC_AUTH_URL=http://localhost:8081
+
+# NextAuth
+NEXTAUTH_SECRET=your-secret-key
+NEXTAUTH_URL=http://localhost:3000
+
+# Grafana/Loki (optional)
+GRAFANA_URL=http://localhost:3100
+```
+
+## Development
+
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Start production server
+npm start
+```

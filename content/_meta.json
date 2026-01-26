@@ -1,6 +1,24 @@
 {
   "index": "Introduction",
-  "getting-started": "Getting Started",
-  "features": "Features",
-  "api": "API Reference"
+  "-- Getting Started": {
+    "type": "separator",
+    "title": "Getting Started"
+  },
+  "architecture": "Architecture",
+  "-- Data Layer": {
+    "type": "separator",
+    "title": "Data Layer"
+  },
+  "database": "Database",
+  "-- Backend": {
+    "type": "separator",
+    "title": "Backend"
+  },
+  "api": "API Reference",
+  "authentication": "Authentication",
+  "-- Frontend": {
+    "type": "separator",
+    "title": "Frontend"
+  },
+  "frontend": "Frontend"
 }

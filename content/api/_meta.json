@@ -1,5 +1,7 @@
 {
   "index": "Overview",
-  "authentication": "Authentication",
-  "endpoints": "Endpoints"
+  "customers": "Customers",
+  "invoices": "Invoices",
+  "revenues": "Revenues",
+  "users": "Users"
 }

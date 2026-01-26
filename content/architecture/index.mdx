@@ -1,0 +1,60 @@
+# Architecture Overview
+
+The Dashboard application follows a microservices architecture with clear separation between frontend, backend APIs, and authentication services.
+
+## System Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         Frontend                                 │
+│                    (Next.js + React)                            │
+│                                                                  │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐        │
+│  │  Pages   │  │   UI     │  │  Data    │  │  Auth    │        │
+│  │          │  │Components│  │  Access  │  │(NextAuth)│        │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘        │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                        API Gateway                               │
+└─────────────────────────────────────────────────────────────────┘
+                    │                       │
+                    ▼                       ▼
+┌──────────────────────────┐    ┌──────────────────────────┐
+│     Dashboard API        │    │      OAuth Service       │
+│    (Spring Boot)         │    │     (Spring Boot)        │
+│                          │    │                          │
+│  ┌────────────────────┐  │    │  ┌────────────────────┐  │
+│  │    Controllers     │  │    │  │  Authentication    │  │
+│  ├────────────────────┤  │    │  ├────────────────────┤  │
+│  │     Services       │  │    │  │   JWT Service      │  │
+│  ├────────────────────┤  │    │  ├────────────────────┤  │
+│  │   Repositories     │  │    │  │  Role/Grant Mgmt   │  │
+│  └────────────────────┘  │    │  └────────────────────┘  │
+└──────────────────────────┘    └──────────────────────────┘
+            │                               │
+            ▼                               ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                          MongoDB                                  │
+│                                                                   │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌────────┐ │
+│  │customers │ │ invoices │ │ revenues │ │  users   │ │ roles  │ │
+│  └──────────┘ └──────────┘ └──────────┘ └──────────┘ └────────┘ │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+## Project Repositories
+
+| Repository | Description | Technology |
+|------------|-------------|------------|
+| `nextjs-dashboard-frontend` | Frontend application | Next.js 15, React 19 |
+| `spring-dashboard` | Main backend API | Spring Boot, MongoDB |
+| `spring-dashboard-common` | Shared library | Java |
+| `spring-dashboard-oauth` | Authentication service | Spring Boot, JWT |
+
+## Quick Links
+
+- [Technology Stack](/architecture/tech-stack) - Detailed tech overview
+- [Data Flow](/architecture/data-flow) - Request and auth flows
+- [Security](/architecture/security) - Permission model

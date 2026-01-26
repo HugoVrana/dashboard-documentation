@@ -1,0 +1,171 @@
+# Dashboard Collections
+
+Collections used by the main Dashboard API service.
+
+## customers
+
+Stores customer information.
+
+```typescript
+{
+  _id: ObjectId,
+  name: string,
+  email: string,
+  image_url: string,
+  audit: Audit
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `_id` | ObjectId | Yes | Primary key |
+| `name` | string | Yes | Customer full name |
+| `email` | string | Yes | Email address |
+| `image_url` | string | No | Avatar image path |
+| `audit` | Audit | Yes | Timestamps |
+
+### Example Document
+
+```json
+{
+  "_id": { "$oid": "507f1f77bcf86cd799439011" },
+  "name": "John Doe",
+  "email": "john@example.com",
+  "image_url": "/customers/john-doe.png",
+  "audit": {
+    "createdAt": { "$date": "2024-01-15T10:30:00Z" },
+    "updatedAt": { "$date": "2024-01-15T10:30:00Z" },
+    "deletedAt": null
+  }
+}
+```
+
+---
+
+## invoices
+
+Stores invoice records with references to customers.
+
+```typescript
+{
+  _id: ObjectId,
+  customer: DBRef<Customer>,
+  amount: Double,
+  date: LocalDate,
+  status: string,
+  audit: Audit
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `_id` | ObjectId | Yes | Primary key |
+| `customer` | DBRef | Yes | Reference to customer |
+| `amount` | Double | Yes | Invoice amount |
+| `date` | LocalDate | Yes | Invoice date |
+| `status` | string | Yes | `pending` or `paid` |
+| `audit` | Audit | Yes | Timestamps |
+
+### Example Document
+
+```json
+{
+  "_id": { "$oid": "507f1f77bcf86cd799439012" },
+  "customer": {
+    "$ref": "customers",
+    "$id": { "$oid": "507f1f77bcf86cd799439011" }
+  },
+  "amount": 1500.00,
+  "date": "2024-01-15",
+  "status": "pending",
+  "audit": {
+    "createdAt": { "$date": "2024-01-15T10:30:00Z" },
+    "updatedAt": { "$date": "2024-01-15T10:30:00Z" },
+    "deletedAt": null
+  }
+}
+```
+
+### Status Values
+
+| Status | Description |
+|--------|-------------|
+| `pending` | Invoice awaiting payment |
+| `paid` | Invoice has been paid |
+
+---
+
+## revenues
+
+Stores monthly revenue aggregations for dashboard charts.
+
+```typescript
+{
+  _id: ObjectId,
+  month: string,
+  revenue: Double,
+  audit: Audit
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `_id` | ObjectId | Yes | Primary key |
+| `month` | string | Yes | Month name (e.g., "Jan") |
+| `revenue` | Double | Yes | Total revenue |
+| `audit` | Audit | Yes | Timestamps |
+
+### Example Document
+
+```json
+{
+  "_id": { "$oid": "507f1f77bcf86cd799439013" },
+  "month": "Jan",
+  "revenue": 15000.00,
+  "audit": {
+    "createdAt": { "$date": "2024-01-31T23:59:59Z" },
+    "updatedAt": { "$date": "2024-01-31T23:59:59Z" },
+    "deletedAt": null
+  }
+}
+```
+
+---
+
+## users
+
+Stores user account information (separate from OAuth users).
+
+```typescript
+{
+  _id: ObjectId,
+  name: string,
+  email: string,
+  password: string,
+  audit: Audit
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `_id` | ObjectId | Yes | Primary key |
+| `name` | string | Yes | User full name |
+| `email` | string | Yes | Email address |
+| `password` | string | Yes | Hashed password |
+| `audit` | Audit | Yes | Timestamps |
+
+### Example Document
+
+```json
+{
+  "_id": { "$oid": "507f1f77bcf86cd799439014" },
+  "name": "Admin User",
+  "email": "admin@example.com",
+  "password": "$2a$10$...",
+  "audit": {
+    "createdAt": { "$date": "2024-01-01T00:00:00Z" },
+    "updatedAt": { "$date": "2024-01-01T00:00:00Z" },
+    "deletedAt": null
+  }
+}
+```

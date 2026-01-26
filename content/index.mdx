@@ -1,13 +1,39 @@
 # Dashboard Documentation
 
-Welcome to the Dashboard documentation.
+Welcome to the comprehensive documentation for the Dashboard application.
 
 ## Overview
 
-This documentation covers everything you need to know about using and configuring the Dashboard application.
+The Dashboard is a full-stack web application built with:
+
+- **Frontend**: Next.js 15 with React 19, TypeScript, and Tailwind CSS
+- **Backend**: Spring Boot with MongoDB
+- **Authentication**: Separate OAuth2 service with JWT tokens backed by MonogoDB
+- **Logging**: Grafana Loki integration for centralized logging
+
+## Project Repositories
+
+The project consists of four main repositories:
+
+| Repository | Description |
+|------------|-------------|
+| `nextjs-dashboard-frontend` | Next.js frontend application |
+| `spring-dashboard` | Main Spring Boot backend API |
+| `spring-dashboard-common` | Shared models and utilities |
+| `spring-dashboard-oauth` | OAuth2 authentication service |
 
 ## Quick Links
 
-- [Getting Started](/getting-started) - Set up your dashboard
-- [Features](/features) - Explore dashboard features
-- [API Reference](/api) - Technical API documentation
+- [Architecture Overview](/architecture) - System design and component interaction
+- [Database Schema](/database) - MongoDB collections and relationships
+- [API Reference](/api) - Complete REST API documentation
+- [Frontend Guide](/frontend) - UI components and pages
+- [Authentication](/authentication) - Auth flow and security
+
+## Key Features
+
+- **Customer Management** - View and manage customer records
+- **Invoice Management** - Create, update, delete, and search invoices
+- **Revenue Tracking** - Monthly revenue visualization
+- **User Management** - User administration with role-based access
+- **Role-Based Access Control** - Fine-grained permissions via grants

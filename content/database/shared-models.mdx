@@ -1,0 +1,207 @@
+# Shared Models
+
+Common models used across all collections, defined in `spring-dashboard-common`.
+
+## Audit
+
+Embedded document for tracking entity lifecycle.
+
+```typescript
+{
+  createdAt: Instant,
+  updatedAt: Instant,
+  deletedAt: Instant    // null if not deleted
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `createdAt` | Instant | When entity was created |
+| `updatedAt` | Instant | Last modification time |
+| `deletedAt` | Instant | Soft delete marker (null = active) |
+
+### Java Definition
+
+```java
+package com.dashboard.common.model;
+
+import lombok.Data;
+import java.time.Instant;
+
+@Data
+public class Audit {
+    private Instant createdAt;
+    private Instant updatedAt;
+    private Instant deletedAt;
+}
+```
+
+### Usage
+
+```java
+Instant now = Instant.now();
+
+Audit audit = new Audit();
+audit.setCreatedAt(now);
+audit.setUpdatedAt(now);
+
+entity.setAudit(audit);
+```
+
+### Soft Delete
+
+Instead of removing documents, set `deletedAt`:
+
+```java
+// Soft delete
+entity.getAudit().setDeletedAt(Instant.now());
+repository.save(entity);
+
+// Query active records only
+@Query("{ 'audit.deletedAt': null }")
+List<Entity> findAllActive();
+```
+
+---
+
+## VerificationToken
+
+Used for email verification and password reset flows.
+
+```typescript
+{
+  token: string,
+  expiresAt: Instant
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `token` | string | Random secure token |
+| `expiresAt` | Instant | Token expiration time |
+
+### Java Definition
+
+```java
+package com.dashboard.oauth.model.entities;
+
+import lombok.Data;
+import java.time.Instant;
+
+@Data
+public class VerificationToken {
+    private String token;
+    private Instant expiresAt;
+}
+```
+
+### Token Generation
+
+```java
+public VerificationToken generateToken(Duration validity) {
+    VerificationToken token = new VerificationToken();
+    token.setToken(UUID.randomUUID().toString());
+    token.setExpiresAt(Instant.now().plus(validity));
+    return token;
+}
+```
+
+---
+
+## Exception Classes
+
+Standardized exceptions in `spring-dashboard-common`.
+
+### ResourceNotFoundException
+
+HTTP 404 - Resource not found.
+
+```java
+throw new ResourceNotFoundException("Customer with id " + id + " not found");
+```
+
+### InvalidRequestException
+
+HTTP 400 - Invalid request data.
+
+```java
+throw new InvalidRequestException("Role id is invalid");
+```
+
+### ConflictException
+
+HTTP 409 - Resource already exists.
+
+```java
+throw new ConflictException("User with this email already exists");
+```
+
+### NotFoundException
+
+HTTP 404 - Generic not found.
+
+```java
+throw new NotFoundException("The provided customer id does not exist");
+```
+
+---
+
+## Relationships Diagram
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                     Dashboard Service                         │
+│                                                               │
+│  ┌──────────────┐       ┌──────────────┐                     │
+│  │   Customer   │◄──────│   Invoice    │                     │
+│  └──────────────┘  1:N  └──────────────┘                     │
+│                                                               │
+└──────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────┐
+│                      OAuth Service                            │
+│                                                               │
+│  ┌──────────────┐       ┌──────────────┐       ┌───────────┐ │
+│  │     User     │──────►│     Role     │──────►│   Grant   │ │
+│  └──────────────┘  N:M  └──────────────┘  N:M  └───────────┘ │
+│                                                               │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### Customer → Invoice (1:N)
+- One customer can have many invoices
+- Invoice references customer via `DBRef`
+
+### User → Role (N:M)
+- User has array of role references
+- User can have multiple roles
+
+### Role → Grant (N:M)
+- Role has array of grant references
+- Role can have multiple grants
+- Same grant can belong to multiple roles
+
+---
+
+## Indexes
+
+### Dashboard Collections
+
+| Collection | Index | Type |
+|------------|-------|------|
+| customers | `_id` | Primary |
+| invoices | `_id` | Primary |
+| invoices | `customer.$id` | Reference |
+| revenues | `_id` | Primary |
+| users | `_id` | Primary |
+
+### OAuth Collections
+
+| Collection | Index | Type |
+|------------|-------|------|
+| users | `_id` | Primary |
+| users | `email` | Unique |
+| roles | `_id` | Primary |
+| roles | `name` | Unique |
+| grants | `_id` | Primary |
+| grants | `name` | Unique |

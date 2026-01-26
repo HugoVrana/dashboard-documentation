@@ -1,0 +1,100 @@
+# Data Flow
+
+## Authentication Flow
+
+```
+┌──────────┐     1. Login Request      ┌──────────────┐
+│          │ ────────────────────────► │              │
+│  Client  │                           │ OAuth Service│
+│          │ ◄──────────────────────── │              │
+└──────────┘  2. JWT + Refresh Token   └──────────────┘
+     │
+     │ 3. API Request with JWT
+     ▼
+┌──────────────┐
+│              │
+│ Dashboard API│
+│              │
+└──────────────┘
+```
+
+### Step-by-Step
+
+1. **User Login**: Client sends credentials to OAuth service
+2. **Token Generation**: OAuth validates credentials, generates JWT + refresh token
+3. **Token Storage**: Frontend stores tokens (NextAuth session)
+4. **API Requests**: Frontend includes JWT in Authorization header
+5. **Token Validation**: Backend validates JWT, extracts grants
+6. **Access Control**: `@PreAuthorize` checks user permissions
+
+## API Request Flow
+
+```
+┌────────────┐    ┌─────────────────┐    ┌────────────┐
+│            │    │                 │    │            │
+│  Frontend  │───►│ JwtGrantsFilter │───►│ Controller │
+│            │    │                 │    │            │
+└────────────┘    └─────────────────┘    └────────────┘
+                                               │
+                                               ▼
+                  ┌─────────────────┐    ┌────────────┐
+                  │                 │    │            │
+                  │   Repository    │◄───│  Service   │
+                  │                 │    │            │
+                  └─────────────────┘    └────────────┘
+                          │
+                          ▼
+                  ┌─────────────────┐
+                  │                 │
+                  │    MongoDB      │
+                  │                 │
+                  └─────────────────┘
+```
+
+### Request Processing
+
+1. **Filter Chain**: `JwtGrantsFilter` extracts and validates JWT
+2. **Security Context**: User grants loaded into Spring Security context
+3. **Authorization**: `@PreAuthorize` annotation checks required grants
+4. **Controller**: Handles request, validates input
+5. **Service**: Business logic execution
+6. **Repository**: Database operations via Spring Data
+7. **Response**: DTO mapping and JSON serialization
+
+## Token Refresh Flow
+
+```
+┌──────────┐     Refresh Token       ┌──────────────┐
+│          │ ───────────────────────►│              │
+│  Client  │                         │ OAuth Service│
+│          │ ◄───────────────────────│              │
+└──────────┘  New JWT + Refresh      └──────────────┘
+```
+
+1. Access token expires (or nearing expiration)
+2. Client sends refresh token to `/api/auth/refresh`
+3. OAuth validates refresh token
+4. New access + refresh tokens generated
+5. Old refresh token invalidated (rotation)
+
+## Search Flow (Invoices)
+
+```
+┌──────────┐     Search Query      ┌─────────────────┐
+│          │ ─────────────────────►│                 │
+│  Client  │                       │ Dashboard API   │
+│          │ ◄─────────────────────│                 │
+└──────────┘   Paginated Results   └─────────────────┘
+                                          │
+                                          ▼
+                                   ┌─────────────────┐
+                                   │                 │
+                                   │  Elasticsearch  │
+                                   │                 │
+                                   └─────────────────┘
+```
+
+1. Client sends search request with pagination
+2. `InvoiceSearchService` queries Elasticsearch
+3. Results mapped to DTOs
+4. Paginated response returned

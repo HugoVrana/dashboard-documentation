@@ -1,0 +1,42 @@
+# Authentication Overview
+
+The Dashboard uses a separate OAuth service for authentication, implementing JWT-based authentication with refresh token rotation.
+
+## Authentication Flow
+
+```
+┌──────────┐     1. Login Request      ┌──────────────┐
+│          │ ────────────────────────► │              │
+│  Client  │                           │ OAuth Service│
+│          │ ◄──────────────────────── │              │
+└──────────┘  2. JWT + Refresh Token   └──────────────┘
+     │
+     │ 3. API Request with JWT
+     ▼
+┌──────────────┐
+│              │
+│ Dashboard API│
+│              │
+└──────────────┘
+```
+
+## Key Features
+
+- **JWT Access Tokens** - Short-lived tokens for API access
+- **Refresh Token Rotation** - Secure token refresh with rotation
+- **Role-Based Access** - Users assigned roles with specific grants
+- **Email Verification** - Verify user email addresses
+- **Password Reset** - Secure password reset flow
+
+## Service URLs
+
+| Environment | OAuth Service |
+|-------------|---------------|
+| Development | `http://localhost:8081` |
+| Production | Configure via environment |
+
+## Quick Links
+
+- [Auth Endpoints](/authentication/endpoints) - Login, register, refresh
+- [Roles & Grants](/authentication/roles-grants) - Permission management
+- [Frontend Integration](/authentication/frontend-integration) - NextAuth setup

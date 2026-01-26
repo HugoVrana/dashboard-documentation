@@ -1,17 +1,74 @@
 # API Reference
 
-Technical documentation for the Dashboard API.
+The Dashboard backend exposes RESTful APIs for managing customers, invoices, revenues, and users.
 
-## Base URL
+## Base URLs
 
-```
-https://api.yourdomain.com/v1
-```
+| Service | Base URL |
+|---------|----------|
+| Dashboard API | `http://localhost:8080` |
+| OAuth Service | `http://localhost:8081` |
 
 ## Authentication
 
-All API requests require authentication. See the [Authentication](/api/authentication) section for details.
+All Dashboard API endpoints require a valid JWT token in the `Authorization` header:
 
-## Rate Limiting
+```http
+Authorization: Bearer <jwt_token>
+```
 
-API requests are rate limited to ensure fair usage.
+Tokens are obtained from the OAuth service via the `/api/auth/login` endpoint.
+
+## Common Response Codes
+
+| Code | Description |
+|------|-------------|
+| `200` | Success |
+| `201` | Created |
+| `204` | No Content |
+| `400` | Bad Request - Invalid input |
+| `401` | Unauthorized - Missing or invalid token |
+| `403` | Forbidden - Insufficient permissions |
+| `404` | Not Found - Resource doesn't exist |
+| `409` | Conflict - Resource already exists |
+| `500` | Internal Server Error |
+
+## Pagination
+
+Endpoints that support pagination accept a `PageRequest` body:
+
+```json
+{
+  "page": 1,
+  "size": 15,
+  "search": "optional search term",
+  "sort": "field_name",
+  "order": "asc"
+}
+```
+
+Paginated responses return a `PageRead` object:
+
+```json
+{
+  "data": [...],
+  "totalPages": 10,
+  "currentPage": 1,
+  "itemsPerPage": 15
+}
+```
+
+## Required Grants
+
+Each endpoint requires specific grants (permissions) assigned to the user's roles:
+
+| Grant | Description |
+|-------|-------------|
+| `dashboard-customers-read` | Read customer data |
+| `dashboard-invoices-read` | Read invoice data |
+| `dashboard-invoices-create` | Create new invoices |
+| `dashboard-invoices-update` | Update existing invoices |
+| `dashboard-invoices-delete` | Delete invoices |
+| `dashboard-revenue-read` | Read revenue data |
+| `dashboard-users-read` | Read user data |
+| `dashboard-users-create` | Create/search users |
