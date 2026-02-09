@@ -1,4 +1,4 @@
-# Auth Endpoints
+# OAuth2 Endpoints
 
 Base URL: `/api/auth`
 
@@ -43,6 +43,18 @@ Content-Type: application/json
 }
 ```
 
+### Response `400 BAD REQUEST`
+
+Invalid request data or validation failed.
+
+### Response `404 NOT FOUND`
+
+Role ID does not exist.
+
+### Response `409 CONFLICT`
+
+A user with this email already exists.
+
 ---
 
 ## Login
@@ -77,6 +89,10 @@ Content-Type: application/json
 }
 ```
 
+### Response `401 UNAUTHORIZED`
+
+Invalid email or password.
+
 ---
 
 ## Refresh Token
@@ -107,6 +123,10 @@ Content-Type: application/json
 
 > **Note**: The old refresh token is invalidated (rotation).
 
+### Response `401 UNAUTHORIZED`
+
+Invalid or expired refresh token.
+
 ---
 
 ## Logout
@@ -121,6 +141,10 @@ Authorization: Bearer <access_token>
 ### Response `200 OK`
 
 No body.
+
+### Response `401 UNAUTHORIZED`
+
+Missing or invalid access token.
 
 ---
 
@@ -143,6 +167,10 @@ Authorization: Bearer <access_token>
 }
 ```
 
+### Response `401 UNAUTHORIZED`
+
+Missing or invalid access token.
+
 ---
 
 ## Verify Email
@@ -156,6 +184,10 @@ POST /api/auth/verify-email?token=verification_token_here
 ### Response `200 OK`
 
 No body.
+
+### Response `400 BAD REQUEST`
+
+Invalid or expired verification token.
 
 ---
 
@@ -204,6 +236,10 @@ Content-Type: application/json
 
 No body.
 
+### Response `400 BAD REQUEST`
+
+Invalid or expired reset token.
+
 ---
 
 ## Add Role to User
@@ -236,14 +272,54 @@ Content-Type: application/json
 }
 ```
 
+### Response `400 BAD REQUEST`
+
+Invalid user ID or role ID format.
+
+### Response `404 NOT FOUND`
+
+User or role not found.
+
+### Response `409 CONFLICT`
+
+User already has this role assigned.
+
 ---
 
 ## Error Responses
 
-| Code | Description |
-|------|-------------|
-| `400` | Invalid request data |
-| `401` | Invalid credentials |
-| `404` | User/Role not found |
-| `409` | User already exists |
-| `500` | Server error |
+All endpoints may return these common error codes:
+
+| Code | Exception | Description |
+|------|-----------|-------------|
+| `400` | `InvalidRequestException` | Invalid request data or validation failed |
+| `401` | `ResponseStatusException` | Invalid credentials or missing/expired token |
+| `404` | `ResourceNotFoundException` | Requested resource not found |
+| `409` | `ConflictException` | Resource conflict (e.g., duplicate email, role already assigned) |
+| `500` | `Exception` | Internal server error |
+
+### Error Response Format
+
+Errors are returned using the RFC 7807 Problem Details format:
+
+```json
+{
+  "type": "about:blank",
+  "title": "Conflict",
+  "status": 409,
+  "detail": "User already has this role",
+  "instance": "/api/auth/user/role"
+}
+```
+
+For validation errors (`400`):
+
+```json
+{
+  "type": "about:blank",
+  "title": "Validation failed",
+  "status": 400,
+  "detail": "Email must be a valid email address",
+  "instance": "/api/auth/register"
+}
+```

@@ -1,0 +1,27 @@
+# Activity Endpoints
+
+Base URL: `/api/activity`
+
+### Recent
+
+Gets the latest activities
+```http
+GET /api/activity/recent
+```
+
+### Response `200 OK`
+Returns latest events
+```json
+[
+  {
+    "id": "507f1f77bcf86cd799439011",
+    "type": "pending",
+    "actorId": "507f1f77bcf86cd799439013",
+    "actorName": "User Name",
+    "timestamp" : "2025-01-01 08:00.0000",
+    "metadata" : [
+      {"key" : "value"}
+        ]
+  }
+]
+```
