@@ -1,0 +1,327 @@
+# Frontend Setup
+
+The frontend uses SockJS with STOMP.js to connect to the Spring WebSocket backend and receive real-time updates.
+
+## Dependencies
+
+Install the required packages:
+
+```bash
+npm install sockjs-client @stomp/stompjs
+```
+
+For TypeScript support:
+
+```bash
+npm install --save-dev @types/sockjs-client
+```
+
+## Basic Connection
+
+Create a WebSocket client utility:
+
+```typescript
+import SockJS from 'sockjs-client';
+import { Client, IMessage } from '@stomp/stompjs';
+
+const WEBSOCKET_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:8080/ws';
+
+export function createWebSocketClient(): Client {
+  const client = new Client({
+    webSocketFactory: () => new SockJS(WEBSOCKET_URL),
+    reconnectDelay: 5000,
+    heartbeatIncoming: 4000,
+    heartbeatOutgoing: 4000,
+  });
+
+  client.onConnect = () => {
+    console.log('WebSocket connected');
+  };
+
+  client.onDisconnect = () => {
+    console.log('WebSocket disconnected');
+  };
+
+  client.onStompError = (frame) => {
+    console.error('STOMP error:', frame.headers['message']);
+  };
+
+  return client;
+}
+```
+
+## React Hook
+
+Create a custom hook for WebSocket subscriptions:
+
+```typescript
+import { useEffect, useRef, useCallback } from 'react';
+import { Client, IMessage } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
+
+const WEBSOCKET_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:8080/ws';
+
+interface UseWebSocketOptions<T> {
+  topic: string;
+  onMessage: (data: T) => void;
+  enabled?: boolean;
+}
+
+export function useWebSocket<T>({ topic, onMessage, enabled = true }: UseWebSocketOptions<T>) {
+  const clientRef = useRef<Client | null>(null);
+
+  const connect = useCallback(() => {
+    if (clientRef.current?.connected) return;
+
+    const client = new Client({
+      webSocketFactory: () => new SockJS(WEBSOCKET_URL),
+      reconnectDelay: 5000,
+      heartbeatIncoming: 4000,
+      heartbeatOutgoing: 4000,
+    });
+
+    client.onConnect = () => {
+      client.subscribe(topic, (message: IMessage) => {
+        const data = JSON.parse(message.body) as T;
+        onMessage(data);
+      });
+    };
+
+    client.activate();
+    clientRef.current = client;
+  }, [topic, onMessage]);
+
+  const disconnect = useCallback(() => {
+    if (clientRef.current) {
+      clientRef.current.deactivate();
+      clientRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (enabled) {
+      connect();
+    }
+    return () => disconnect();
+  }, [enabled, connect, disconnect]);
+
+  return { disconnect };
+}
+```
+
+## Usage in Components
+
+### Live Metrics Dashboard
+
+```tsx
+'use client';
+
+import { useState } from 'react';
+import { useWebSocket } from '@/hooks/useWebSocket';
+
+interface LiveMetrics {
+  totalInvoices: number;
+  pendingInvoices: number;
+  paidInvoices: number;
+  totalRevenue: number;
+  activeCustomers: number;
+  timestamp: string;
+}
+
+export function LiveDashboard() {
+  const [metrics, setMetrics] = useState<LiveMetrics | null>(null);
+
+  useWebSocket<LiveMetrics>({
+    topic: '/topic/metrics',
+    onMessage: (data) => setMetrics(data),
+  });
+
+  if (!metrics) {
+    return <div>Connecting to live feed...</div>;
+  }
+
+  return (
+    <div className="grid grid-cols-4 gap-4">
+      <MetricCard title="Total Invoices" value={metrics.totalInvoices} />
+      <MetricCard title="Pending" value={metrics.pendingInvoices} />
+      <MetricCard title="Paid" value={metrics.paidInvoices} />
+      <MetricCard title="Active Customers" value={metrics.activeCustomers} />
+    </div>
+  );
+}
+```
+
+### Real-time Invoice Updates
+
+```tsx
+'use client';
+
+import { useState, useCallback } from 'react';
+import { useWebSocket } from '@/hooks/useWebSocket';
+
+interface InvoiceUpdate {
+  invoiceId: string;
+  status: string;
+  action: 'created' | 'updated' | 'deleted';
+  timestamp: string;
+}
+
+export function InvoiceFeed() {
+  const [updates, setUpdates] = useState<InvoiceUpdate[]>([]);
+
+  const handleUpdate = useCallback((update: InvoiceUpdate) => {
+    setUpdates((prev) => [update, ...prev].slice(0, 10)); // Keep last 10
+  }, []);
+
+  useWebSocket<InvoiceUpdate>({
+    topic: '/topic/invoices',
+    onMessage: handleUpdate,
+  });
+
+  return (
+    <div className="space-y-2">
+      <h3>Recent Activity</h3>
+      {updates.map((update, i) => (
+        <div key={i} className="p-2 border rounded">
+          Invoice {update.invoiceId} {update.action}
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+## Multiple Subscriptions
+
+Subscribe to multiple topics with a single connection:
+
+```typescript
+import { useEffect, useRef } from 'react';
+import { Client } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
+
+interface Subscriptions {
+  [topic: string]: (data: any) => void;
+}
+
+export function useMultiWebSocket(subscriptions: Subscriptions) {
+  const clientRef = useRef<Client | null>(null);
+
+  useEffect(() => {
+    const client = new Client({
+      webSocketFactory: () => new SockJS(WEBSOCKET_URL),
+      reconnectDelay: 5000,
+    });
+
+    client.onConnect = () => {
+      Object.entries(subscriptions).forEach(([topic, callback]) => {
+        client.subscribe(topic, (message) => {
+          callback(JSON.parse(message.body));
+        });
+      });
+    };
+
+    client.activate();
+    clientRef.current = client;
+
+    return () => {
+      client.deactivate();
+    };
+  }, []);
+}
+
+// Usage
+useMultiWebSocket({
+  '/topic/metrics': (data) => setMetrics(data),
+  '/topic/invoices': (data) => addInvoiceUpdate(data),
+  '/topic/revenue': (data) => setRevenue(data),
+});
+```
+
+## Sending Messages
+
+Send messages to the server:
+
+```typescript
+export function useWebSocketWithSend<T, S>(topic: string, onMessage: (data: T) => void) {
+  const clientRef = useRef<Client | null>(null);
+
+  const sendMessage = useCallback((destination: string, body: S) => {
+    if (clientRef.current?.connected) {
+      clientRef.current.publish({
+        destination,
+        body: JSON.stringify(body),
+      });
+    }
+  }, []);
+
+  // ... connection logic
+
+  return { sendMessage };
+}
+
+// Usage
+const { sendMessage } = useWebSocketWithSend('/topic/response', handleResponse);
+sendMessage('/app/dashboard', { type: 'refresh' });
+```
+
+## Environment Configuration
+
+Add WebSocket URL to your environment:
+
+```env
+# .env.local
+NEXT_PUBLIC_WS_URL=http://localhost:8080/ws
+```
+
+```env
+# .env.production
+NEXT_PUBLIC_WS_URL=https://api.dashboard.example.com/ws
+```
+
+## Connection Status Component
+
+Display connection status to users:
+
+```tsx
+'use client';
+
+import { useState, useEffect } from 'react';
+import { Client } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
+
+export function ConnectionStatus() {
+  const [status, setStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
+
+  useEffect(() => {
+    const client = new Client({
+      webSocketFactory: () => new SockJS(WEBSOCKET_URL),
+    });
+
+    client.onConnect = () => setStatus('connected');
+    client.onDisconnect = () => setStatus('disconnected');
+    client.onWebSocketClose = () => setStatus('disconnected');
+
+    client.activate();
+
+    return () => {
+      client.deactivate();
+    };
+  }, []);
+
+  return (
+    <div className="flex items-center gap-2">
+      <span
+        className={`w-2 h-2 rounded-full ${
+          status === 'connected' ? 'bg-green-500' :
+          status === 'connecting' ? 'bg-yellow-500' : 'bg-red-500'
+        }`}
+      />
+      <span className="text-sm text-gray-600">
+        {status === 'connected' ? 'Live' :
+         status === 'connecting' ? 'Connecting...' : 'Offline'}
+      </span>
+    </div>
+  );
+}
+```

@@ -1,0 +1,90 @@
+# WebSocket Architecture
+
+The Dashboard application uses WebSockets to enable real-time updates for the live dashboard, pushing metrics and statistics to connected clients without polling.
+
+## Overview
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         Frontend                                 │
+│                    (Next.js + React)                            │
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │              SockJS + STOMP.js Client                     │   │
+│  │                                                           │   │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐       │   │
+│  │  │  Connect    │  │  Subscribe  │  │  Receive    │       │   │
+│  │  │  to Server  │  │  to Topics  │  │  Messages   │       │   │
+│  │  └─────────────┘  └─────────────┘  └─────────────┘       │   │
+│  └──────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              │ WebSocket / SockJS Fallback
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     Dashboard API                                │
+│                    (Spring Boot)                                 │
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │              Spring WebSocket + STOMP                     │   │
+│  │                                                           │   │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐       │   │
+│  │  │  Message    │  │  Message    │  │  STOMP      │       │   │
+│  │  │  Broker     │  │  Handlers   │  │  Endpoints  │       │   │
+│  │  └─────────────┘  └─────────────┘  └─────────────┘       │   │
+│  └──────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## Technology Stack
+
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| Backend | Spring WebSocket | WebSocket support in Spring |
+| Backend | STOMP | Simple messaging protocol |
+| Frontend | SockJS | WebSocket with fallback support |
+| Frontend | STOMP.js | STOMP client for JavaScript |
+
+## Key Concepts
+
+### STOMP Protocol
+
+STOMP (Simple Text Oriented Messaging Protocol) provides a frame-based protocol over WebSocket:
+
+- **CONNECT** - Establish connection
+- **SUBSCRIBE** - Subscribe to a destination (topic)
+- **SEND** - Send message to a destination
+- **MESSAGE** - Server-to-client message
+- **DISCONNECT** - Close connection
+
+### SockJS Fallback
+
+SockJS provides WebSocket emulation when native WebSocket is unavailable:
+
+1. **WebSocket** - Native protocol (preferred)
+2. **XHR Streaming** - Long-polling fallback
+3. **XHR Polling** - Short-polling fallback
+
+## Documentation
+
+### Setup Guides
+
+| Page | Description |
+|------|-------------|
+| [Backend Setup](/websockets/backend-setup) | Spring WebSocket + STOMP configuration, message controllers, broadcasting |
+| [Frontend Setup](/websockets/frontend-setup) | SockJS + STOMP.js client, React hooks, connection management |
+
+### Reference
+
+| Page | Description |
+|------|-------------|
+| [Messages & Topics](/websockets/messages) | All message types, payload formats, TypeScript interfaces |
+
+## Available Topics
+
+| Topic | Frequency | Description |
+|-------|-----------|-------------|
+| `/topic/metrics` | Every 5s | Live dashboard statistics (invoices, revenue, customers) |
+| `/topic/invoices` | On change | Invoice created, updated, or deleted |
+| `/topic/revenue` | On change | Monthly revenue updates |
+| `/topic/customers` | On change | Customer activity events |

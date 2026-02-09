@@ -1,0 +1,238 @@
+# Messages and Topics
+
+This page documents the WebSocket message types and topics used for real-time communication.
+
+## On This Page
+
+| Section | Description |
+|---------|-------------|
+| [Topic Structure](#topic-structure) | Overview of all available topics |
+| [Message Flow](#message-flow) | How messages flow from server to clients |
+| [Live Metrics](#live-metrics) | `/topic/metrics` - Dashboard statistics |
+| [Invoice Updates](#invoice-updates) | `/topic/invoices` - Invoice CRUD events |
+| [Revenue Updates](#revenue-updates) | `/topic/revenue` - Revenue changes |
+| [Customer Updates](#customer-updates) | `/topic/customers` - Customer activity |
+| [TypeScript Interfaces](#typescript-interfaces) | Type definitions for all messages |
+| [Client-to-Server](#client-to-server-messages) | Messages from client to server |
+| [Error Messages](#error-messages) | Error handling |
+
+---
+
+## Topic Structure
+
+| Topic | Direction | Description |
+|-------|-----------|-------------|
+| `/topic/metrics` | Server → Client | Live dashboard metrics |
+| `/topic/invoices` | Server → Client | Invoice create/update/delete events |
+| `/topic/revenue` | Server → Client | Revenue updates |
+| `/topic/customers` | Server → Client | Customer activity updates |
+
+## Message Flow
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                         Server                                │
+│                                                               │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐       │
+│  │  Database   │───►│  Service    │───►│  Broadcast  │       │
+│  │  Change     │    │  Layer      │    │  Service    │       │
+│  └─────────────┘    └─────────────┘    └─────────────┘       │
+│                                               │               │
+└───────────────────────────────────────────────│───────────────┘
+                                                │
+                    ┌───────────────────────────┼───────────────┐
+                    │                           │               │
+                    ▼                           ▼               ▼
+            /topic/invoices           /topic/metrics    /topic/revenue
+                    │                           │               │
+                    ▼                           ▼               ▼
+            ┌─────────────┐           ┌─────────────┐  ┌─────────────┐
+            │  Client A   │           │  Client B   │  │  Client C   │
+            └─────────────┘           └─────────────┘  └─────────────┘
+```
+
+## Message Types
+
+### Live Metrics
+
+**Topic:** `/topic/metrics`
+
+Broadcast every 5 seconds with current dashboard statistics.
+
+```json
+{
+  "totalInvoices": 142,
+  "pendingInvoices": 23,
+  "paidInvoices": 119,
+  "totalRevenue": 58432.50,
+  "activeCustomers": 87,
+  "timestamp": "2024-01-15T10:30:00Z"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `totalInvoices` | `number` | Total invoice count |
+| `pendingInvoices` | `number` | Invoices awaiting payment |
+| `paidInvoices` | `number` | Completed invoices |
+| `totalRevenue` | `number` | Sum of all paid invoices |
+| `activeCustomers` | `number` | Customers with recent activity |
+| `timestamp` | `string` | ISO 8601 timestamp |
+
+### Invoice Updates
+
+**Topic:** `/topic/invoices`
+
+Broadcast when an invoice is created, updated, or deleted.
+
+```json
+{
+  "invoiceId": "507f1f77bcf86cd799439011",
+  "customerId": "507f1f77bcf86cd799439012",
+  "customerName": "Acme Corp",
+  "amount": 1250.00,
+  "status": "paid",
+  "action": "updated",
+  "timestamp": "2024-01-15T10:32:15Z"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `invoiceId` | `string` | MongoDB ObjectId |
+| `customerId` | `string` | Associated customer ID |
+| `customerName` | `string` | Customer display name |
+| `amount` | `number` | Invoice amount |
+| `status` | `string` | `pending` or `paid` |
+| `action` | `string` | `created`, `updated`, or `deleted` |
+| `timestamp` | `string` | ISO 8601 timestamp |
+
+### Revenue Updates
+
+**Topic:** `/topic/revenue`
+
+Broadcast when revenue data changes (e.g., invoice paid).
+
+```json
+{
+  "month": "Jan",
+  "year": 2024,
+  "amount": 12500.00,
+  "previousAmount": 11800.00,
+  "change": 5.93,
+  "timestamp": "2024-01-15T10:35:00Z"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `month` | `string` | Short month name |
+| `year` | `number` | Year |
+| `amount` | `number` | Current month revenue |
+| `previousAmount` | `number` | Previous value before update |
+| `change` | `number` | Percentage change |
+| `timestamp` | `string` | ISO 8601 timestamp |
+
+### Customer Updates
+
+**Topic:** `/topic/customers`
+
+Broadcast when customer data changes.
+
+```json
+{
+  "customerId": "507f1f77bcf86cd799439012",
+  "name": "Acme Corp",
+  "email": "billing@acme.com",
+  "action": "updated",
+  "timestamp": "2024-01-15T10:38:00Z"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `customerId` | `string` | MongoDB ObjectId |
+| `name` | `string` | Customer name |
+| `email` | `string` | Customer email |
+| `action` | `string` | `created`, `updated`, or `deleted` |
+| `timestamp` | `string` | ISO 8601 timestamp |
+
+## TypeScript Interfaces
+
+```typescript
+interface LiveMetrics {
+  totalInvoices: number;
+  pendingInvoices: number;
+  paidInvoices: number;
+  totalRevenue: number;
+  activeCustomers: number;
+  timestamp: string;
+}
+
+interface InvoiceUpdate {
+  invoiceId: string;
+  customerId: string;
+  customerName: string;
+  amount: number;
+  status: 'pending' | 'paid';
+  action: 'created' | 'updated' | 'deleted';
+  timestamp: string;
+}
+
+interface RevenueUpdate {
+  month: string;
+  year: number;
+  amount: number;
+  previousAmount: number;
+  change: number;
+  timestamp: string;
+}
+
+interface CustomerUpdate {
+  customerId: string;
+  name: string;
+  email: string;
+  action: 'created' | 'updated' | 'deleted';
+  timestamp: string;
+}
+```
+
+## Client-to-Server Messages
+
+### Application Destinations
+
+Messages sent to `/app/*` are routed to `@MessageMapping` handlers.
+
+| Destination | Description |
+|-------------|-------------|
+| `/app/dashboard/refresh` | Request immediate metrics update |
+| `/app/subscribe/invoice/{id}` | Subscribe to specific invoice updates |
+
+### Refresh Request
+
+```json
+{
+  "type": "refresh",
+  "target": "metrics"
+}
+```
+
+## Error Messages
+
+When errors occur, they are sent to the client's error channel:
+
+```json
+{
+  "error": "SUBSCRIPTION_ERROR",
+  "message": "Unable to subscribe to topic",
+  "topic": "/topic/invalid",
+  "timestamp": "2024-01-15T10:40:00Z"
+}
+```
+
+## Best Practices
+
+1. **Include timestamps** - Always include ISO 8601 timestamps for ordering
+2. **Use action fields** - Indicate whether data was created, updated, or deleted
+3. **Keep payloads small** - Send only changed data, not full objects
+4. **Handle reconnection** - Request full data refresh after reconnecting

@@ -3,6 +3,7 @@ import { Head } from 'nextra/components'
 import { getPageMap } from 'nextra/page-map'
 import type { ReactNode } from 'react'
 import 'nextra-theme-docs/style.css'
+import './globals.css'
 
 export const metadata = {
   title: {
@@ -30,6 +31,10 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           footer={footer}
           pageMap={await getPageMap()}
           docsRepositoryBase="https://gitlab.com/hugo-dashboard/documentation/tree/main"
+          sidebar={{
+            defaultOpen: true,
+            toggleButton: true
+          }}
         >
           {children}
         </Layout>

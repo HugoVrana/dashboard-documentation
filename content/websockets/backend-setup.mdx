@@ -1,0 +1,200 @@
+# Backend Setup
+
+The Dashboard API uses Spring WebSocket with STOMP messaging to broadcast real-time updates to connected clients.
+
+## Dependencies
+
+Add the following to your `pom.xml`:
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-websocket</artifactId>
+</dependency>
+```
+
+## WebSocket Configuration
+
+Create a configuration class to enable WebSocket messaging:
+
+```java
+@Configuration
+@EnableWebSocketMessageBroker
+public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+
+    @Override
+    public void configureMessageBroker(MessageBrokerRegistry registry) {
+        // Enable simple in-memory message broker for subscriptions
+        registry.enableSimpleBroker("/topic");
+
+        // Prefix for messages FROM clients TO server
+        registry.setApplicationDestinationPrefixes("/app");
+    }
+
+    @Override
+    public void registerStompEndpoints(StompEndpointRegistry registry) {
+        // WebSocket endpoint with SockJS fallback
+        registry.addEndpoint("/ws")
+                .setAllowedOriginPatterns("*")
+                .withSockJS();
+    }
+}
+```
+
+### Configuration Options
+
+| Option | Value | Description |
+|--------|-------|-------------|
+| `enableSimpleBroker` | `/topic` | Prefix for broadcast destinations |
+| `setApplicationDestinationPrefixes` | `/app` | Prefix for client-to-server messages |
+| `addEndpoint` | `/ws` | WebSocket connection endpoint |
+| `withSockJS()` | - | Enable SockJS fallback |
+
+## Message Controller
+
+Handle incoming messages and broadcast to subscribers:
+
+```java
+@Controller
+public class DashboardWebSocketController {
+
+    private final SimpMessagingTemplate messagingTemplate;
+
+    public DashboardWebSocketController(SimpMessagingTemplate messagingTemplate) {
+        this.messagingTemplate = messagingTemplate;
+    }
+
+    // Handle messages sent to /app/dashboard
+    @MessageMapping("/dashboard")
+    @SendTo("/topic/dashboard")
+    public DashboardUpdate handleDashboardMessage(DashboardRequest request) {
+        // Process and return update
+        return new DashboardUpdate(/* ... */);
+    }
+}
+```
+
+## Broadcasting Updates
+
+Send updates to all subscribers programmatically:
+
+```java
+@Service
+public class DashboardBroadcastService {
+
+    private final SimpMessagingTemplate messagingTemplate;
+
+    public DashboardBroadcastService(SimpMessagingTemplate messagingTemplate) {
+        this.messagingTemplate = messagingTemplate;
+    }
+
+    public void broadcastRevenueUpdate(RevenueUpdate update) {
+        messagingTemplate.convertAndSend("/topic/revenue", update);
+    }
+
+    public void broadcastInvoiceUpdate(InvoiceUpdate update) {
+        messagingTemplate.convertAndSend("/topic/invoices", update);
+    }
+
+    public void broadcastCustomerUpdate(CustomerUpdate update) {
+        messagingTemplate.convertAndSend("/topic/customers", update);
+    }
+}
+```
+
+## Scheduled Broadcasting
+
+Push live metrics at regular intervals:
+
+```java
+@Component
+public class DashboardScheduler {
+
+    private final SimpMessagingTemplate messagingTemplate;
+    private final DashboardService dashboardService;
+
+    @Scheduled(fixedRate = 5000) // Every 5 seconds
+    public void broadcastLiveMetrics() {
+        LiveMetrics metrics = dashboardService.getCurrentMetrics();
+        messagingTemplate.convertAndSend("/topic/metrics", metrics);
+    }
+}
+```
+
+Enable scheduling in your main application:
+
+```java
+@SpringBootApplication
+@EnableScheduling
+public class DashboardApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(DashboardApplication.class, args);
+    }
+}
+```
+
+## Connection Lifecycle Events
+
+Monitor WebSocket connections:
+
+```java
+@Component
+public class WebSocketEventListener {
+
+    private static final Logger logger = LoggerFactory.getLogger(WebSocketEventListener.class);
+
+    @EventListener
+    public void handleWebSocketConnect(SessionConnectEvent event) {
+        logger.info("New WebSocket connection: {}", event.getMessage().getHeaders().get("simpSessionId"));
+    }
+
+    @EventListener
+    public void handleWebSocketDisconnect(SessionDisconnectEvent event) {
+        logger.info("WebSocket disconnected: {}", event.getSessionId());
+    }
+}
+```
+
+## CORS Configuration
+
+Ensure CORS is configured for WebSocket endpoints:
+
+```java
+@Override
+public void registerStompEndpoints(StompEndpointRegistry registry) {
+    registry.addEndpoint("/ws")
+            .setAllowedOriginPatterns(
+                "http://localhost:3000",
+                "https://dashboard.example.com"
+            )
+            .withSockJS();
+}
+```
+
+## Message DTOs
+
+Define message payload classes:
+
+```java
+public record LiveMetrics(
+    int totalInvoices,
+    int pendingInvoices,
+    int paidInvoices,
+    BigDecimal totalRevenue,
+    int activeCustomers,
+    Instant timestamp
+) {}
+
+public record RevenueUpdate(
+    String month,
+    BigDecimal amount,
+    Instant timestamp
+) {}
+
+public record InvoiceUpdate(
+    String invoiceId,
+    String status,
+    String action, // "created", "updated", "deleted"
+    Instant timestamp
+) {}
+```
