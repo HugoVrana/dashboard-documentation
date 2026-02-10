@@ -1,6 +1,6 @@
 # Architecture Overview
 
-The Dashboard application follows a microservices architecture with clear separation between frontend, backend APIs, and authentication services.
+The Dashboard application follows a microservices architecture with clear separation between frontend, backend APIs, and authentication services. Real-time updates are delivered via WebSockets.
 
 ## System Architecture
 
@@ -13,9 +13,16 @@ The Dashboard application follows a microservices architecture with clear separa
 │  │  Pages   │  │   UI     │  │  Data    │  │  Auth    │        │
 │  │          │  │Components│  │  Access  │  │(NextAuth)│        │
 │  └──────────┘  └──────────┘  └──────────┘  └──────────┘        │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
+│                     │                                            │
+│              ┌──────┴──────┐                                     │
+│              │   SockJS +  │                                     │
+│              │   STOMP.js  │                                     │
+│              └──────┬──────┘                                     │
+└─────────────────────│───────────────────────────────────────────┘
+                      │
+         ┌────────────┴────────────┐
+         │ REST API    │ WebSocket │
+         ▼             ▼           │
 ┌─────────────────────────────────────────────────────────────────┐
 │                        API Gateway                               │
 └─────────────────────────────────────────────────────────────────┘
@@ -31,7 +38,9 @@ The Dashboard application follows a microservices architecture with clear separa
 │  │     Services       │  │    │  │   JWT Service      │  │
 │  ├────────────────────┤  │    │  ├────────────────────┤  │
 │  │   Repositories     │  │    │  │  Role/Grant Mgmt   │  │
-│  └────────────────────┘  │    │  └────────────────────┘  │
+│  ├────────────────────┤  │    │  └────────────────────┘  │
+│  │  WebSocket/STOMP   │  │    │                          │
+│  └────────────────────┘  │    │                          │
 └──────────────────────────┘    └──────────────────────────┘
             │                               │
             ▼                               ▼
@@ -58,3 +67,4 @@ The Dashboard application follows a microservices architecture with clear separa
 - [Technology Stack](/architecture/tech-stack) - Detailed tech overview
 - [Data Flow](/architecture/data-flow) - Request and auth flows
 - [Security](/architecture/security) - Permission model
+- [WebSockets](/websockets) - Real-time communication

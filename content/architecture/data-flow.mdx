@@ -98,3 +98,41 @@
 2. `InvoiceSearchService` queries Elasticsearch
 3. Results mapped to DTOs
 4. Paginated response returned
+
+## WebSocket Flow (Live Dashboard)
+
+```
+┌──────────┐                           ┌─────────────────┐
+│          │  1. Connect (SockJS)      │                 │
+│  Client  │ ─────────────────────────►│  Dashboard API  │
+│          │                           │                 │
+│          │  2. STOMP CONNECT         │  ┌───────────┐  │
+│          │ ─────────────────────────►│  │ WebSocket │  │
+│          │                           │  │  Handler  │  │
+│          │  3. SUBSCRIBE /topic/*    │  └───────────┘  │
+│          │ ─────────────────────────►│       │         │
+│          │                           │       ▼         │
+│          │                           │  ┌───────────┐  │
+│          │  4. MESSAGE (push)        │  │  Message  │  │
+│          │ ◄─────────────────────────│  │  Broker   │  │
+│          │                           │  └───────────┘  │
+└──────────┘                           └─────────────────┘
+```
+
+### Step-by-Step
+
+1. **Connect**: Client opens WebSocket via SockJS endpoint (`/ws`)
+2. **STOMP Handshake**: Client sends STOMP CONNECT frame
+3. **Subscribe**: Client subscribes to topics (`/topic/metrics`, `/topic/invoices`)
+4. **Receive Updates**: Server pushes messages to subscribed clients
+
+### Topics
+
+| Topic | Update Frequency | Content |
+|-------|-----------------|---------|
+| `/topic/metrics` | Every 5 seconds | Live dashboard statistics |
+| `/topic/invoices` | On change | Invoice CRUD events |
+| `/topic/revenue` | On change | Revenue updates |
+| `/topic/customers` | On change | Customer activity |
+
+See [WebSocket Messages](/websockets/messages) for detailed message formats.
