@@ -12,5 +12,7 @@ export default withNextra({
   output: 'export',
   images: {
     unoptimized: true
-  }
+  },
+  basePath: '/dashboard-documentation',
+  assetPrefix: '/dashboard-documentation',
 })
