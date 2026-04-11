@@ -1,26 +1,24 @@
 # Data Models
 
-TypeScript types defined in `app/models/`.
+TypeScript types used across the frontend. Models live under their feature area — `app/dashboard/models/`, `app/auth/models/`, and `app/shared/models/`.
+
+---
 
 ## Invoice Types
 
-### InvoiceRead
-
 ```typescript
-// models/invoice/invoiceRead.ts
+// app/dashboard/models/invoiceRead.ts
 type InvoiceRead = {
   id: string;
   amount: number;
-  date: string;
+  date: Date;
   status: 'pending' | 'paid';
   customer: CustomerRead;
 }
 ```
 
-### InvoiceCreate
-
 ```typescript
-// models/invoice/invoiceCreate.ts
+// app/dashboard/models/invoiceCreate.ts
 type InvoiceCreate = {
   status: string;
   amount: number;
@@ -28,26 +26,12 @@ type InvoiceCreate = {
 }
 ```
 
-### InvoiceUpdate
-
 ```typescript
-// models/invoice/invoiceUpdate.ts
+// app/dashboard/models/invoiceUpdate.ts
 type InvoiceUpdate = {
   status: string;
   amount: number;
-  customer_id: string;
-}
-```
-
-### InvoiceForm
-
-```typescript
-// models/invoice/invoiceForm.ts
-type InvoiceForm = {
-  id: string;
-  customer_id: string;
-  amount: number;
-  status: 'pending' | 'paid';
+  customerId: string;   // camelCase — matches backend DTO
 }
 ```
 
@@ -55,42 +39,43 @@ type InvoiceForm = {
 
 ## Customer Types
 
-### CustomerRead
-
 ```typescript
-// models/customer/customerRead.ts
+// app/dashboard/models/customerRead.ts
 type CustomerRead = {
   id: string;
   name: string;
-  email: string;
-  image_url: string;
+  email?: string;
+  image_url?: string | null;
 }
 ```
 
-### CustomerField
+---
 
-Simplified type for dropdowns.
+## Revenue Types
 
 ```typescript
-// models/customer/customerField.ts
-type CustomerField = {
-  id: string;
-  name: string;
+// app/dashboard/models/revenueRead.ts
+type RevenueRead = {
+  month: string;
+  revenue: number;
 }
 ```
 
-### FormattedCustomersTable
+> The `year` field exists in the database but is not exposed in the API response or frontend model — the revenue chart only needs the month label.
+
+---
+
+## Activity Types
 
 ```typescript
-// models/customer/formattedCustomersTable.ts
-type FormattedCustomersTable = {
+// app/dashboard/models/activity/activityEvent.ts
+type ActivityEvent = {
   id: string;
-  name: string;
-  email: string;
-  image_url: string;
-  total_invoices: number;
-  total_pending: string;
-  total_paid: string;
+  type: string;
+  actorId: string;
+  actorName: string;
+  timestamp: string;
+  metadata: Record<string, string>[];
 }
 ```
 
@@ -98,43 +83,67 @@ type FormattedCustomersTable = {
 
 ## Auth Types
 
-### AuthResponse
-
-```typescript
-// models/auth/authResponse.ts
-type AuthResponse = {
-  accessToken: string;
-  refreshToken: string;
-  user: UserInfo;
-}
-```
-
 ### UserInfo
 
+Returned from the OAuth2 login flow and UserInfo endpoint.
+
 ```typescript
-// models/auth/userInfo.ts
+// app/auth/models/user/userInfo.ts
 type UserInfo = {
   id: string;
   email: string;
-  roles: Role[];
+  profileImageUrl?: string | null;
+  roleReads: Role[];
 }
 ```
 
-### Role
+### UserAdminRead
+
+Full admin view of a user account.
 
 ```typescript
-// models/auth/role.ts
+// app/auth/models/user/userAdminRead.ts
+type UserAdminRead = {
+  id?: string;
+  email?: string;
+  emailVerified?: boolean;
+  emailVerifiedAt?: string | null;
+  locked?: boolean;
+  failedLoginAttempts?: number;
+  profileImageUrl?: string | null;
+  roles: Role[];
+  createdAt?: string | null;
+  deletedAt?: string | null;
+}
+```
+
+### UserSelfRead
+
+A user's own account view (returned from `/api/v2/oauth2/userinfo` style self endpoints).
+
+```typescript
+// app/auth/models/user/userSelfRead.ts
+type UserSelfRead = {
+  id?: string;
+  email?: string;
+  emailVerified?: boolean;
+  emailVerifiedAt?: string | null;
+  profileImageUrl?: string | null;
+  locked?: boolean;
+}
+```
+
+### Role & Grant
+
+```typescript
+// app/auth/models/role/roleRead.ts
 type Role = {
   id: string;
   name: string;
   grants: Grant[];
 }
-```
 
-### Grant
-
-```typescript
-// models/auth/grant.ts
+// app/auth/models/grant/grantRead.ts
 type Grant = {
   id: string;
   name: string;
@@ -142,33 +151,24 @@ type Grant = {
 }
 ```
 
-### LoginRequest
+### Auth flow models
 
 ```typescript
-// models/auth/loginRequest.ts
-type LoginRequest = {
-  email: string;
-  password: string;
-}
-```
+// app/auth/models/authMessaging/loginActionResult.ts
+type LoginActionResult =
+  | { status: 'success'; accessToken: string; refreshToken: string; expiresIn: number; userInfoJson: string; url: string }
+  | { status: 'mfa_required' }
+  | { status: 'error'; message: string }
 
-### RegisterRequest
+// app/auth/models/authMessaging/completeMfaActionResult.ts
+type CompleteMfaActionResult =
+  | { status: 'success'; accessToken: string; refreshToken: string; expiresIn: number; userInfoJson: string; url: string }
+  | { status: 'error'; message: string }
 
-```typescript
-// models/auth/registerRequest.ts
-type RegisterRequest = {
-  email: string;
-  password: string;
-  roleId: string;
-}
-```
-
-### RefreshTokenRequest
-
-```typescript
-// models/auth/refreshTokenRequest.ts
-type RefreshTokenRequest = {
-  refreshToken: string;
+// app/auth/models/authMessaging/totpSetupResponse.ts
+type TotpSetupResponse = {
+  qrCodeDataUri: string;
+  secret: string;
 }
 ```
 
@@ -176,10 +176,8 @@ type RefreshTokenRequest = {
 
 ## Pagination Types
 
-### PageRequest
-
 ```typescript
-// models/page/pageRequest.ts
+// app/shared/models/pageRequest.ts
 type PageRequest = {
   page?: number;
   size?: number;
@@ -187,12 +185,8 @@ type PageRequest = {
   sort?: string;
   order?: string;
 }
-```
 
-### PageResponse
-
-```typescript
-// models/page/pageResponse.ts
+// app/shared/models/pageResponse.ts
 type PageResponse<T> = {
   data: T[];
   totalPages: number;
@@ -203,51 +197,65 @@ type PageResponse<T> = {
 
 ---
 
-## Revenue Types
+## State Type
 
-### RevenueRead
-
-```typescript
-// models/revenue/revenueRead.ts
-type RevenueRead = {
-  id: string;
-  month: string;
-  revenue: number;
-}
-```
-
----
-
-## User Types
-
-### UserRead
+Form action state returned by Next.js server actions.
 
 ```typescript
-// models/user/userRead.ts
-type UserRead = {
-  id: string;
-  name: string;
-  email: string;
-}
-```
-
----
-
-## State Types
-
-### State
-
-Form action state type.
-
-```typescript
-// models/state.ts
+// app/shared/models/state.ts
 type State = {
   errors?: {
-    customerId?: string[];
+    customer?: string[];
     amount?: string[];
     status?: string[];
   };
-  message?: string | null;
+  message: string | null;   // non-optional
+}
+```
+
+---
+
+## NextAuth Session
+
+```typescript
+// app/auth/models/next-auth.d.ts
+declare module 'next-auth' {
+  interface Session {
+    accessToken: string;
+    refreshToken: string;
+    expiresAt: number;
+    url: string;
+    user: {
+      id: string;
+      role: Role[];
+      grants: string[];   // flattened from roles
+      image?: string | null;
+    } & DefaultSession['user'];
+  }
+
+  interface User {
+    id: string;
+    email: string;
+    role: Role[];
+    grants: string[];
+    accessToken: string;
+    refreshToken: string;
+    expiresIn: number;
+    url: string;
+    imageUrl: string | null;
+  }
+}
+
+declare module 'next-auth/jwt' {
+  interface JWT {
+    id: string;
+    role: Role[];
+    grants: string[];
+    accessToken: string;
+    refreshToken: string;
+    expiresAt: number;
+    image: string | null;
+  }
 }
 ```
 
@@ -255,22 +263,16 @@ type State = {
 
 ## Log Types
 
-### LogCreate
-
 ```typescript
-// models/log/logCreate.ts
+// app/shared/models/logCreate.ts
 type LogCreate = {
   level: string;
   message: string;
   timestamp: string;
   labels: Record<string, string>;
 }
-```
 
-### LokiStream
-
-```typescript
-// models/log/lokiStream.ts
+// app/shared/models/lokiStream.ts
 type LokiStream = {
   stream: Record<string, string>;
   values: [string, string][];

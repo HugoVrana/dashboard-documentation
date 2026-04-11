@@ -8,15 +8,23 @@ Stores user authentication information.
 
 ```typescript
 {
-  _id: ObjectId,
-  email: string,              // unique index
-  password: string,           // BCrypt hashed
-  emailVerified: Boolean,
-  emailVerifiedAt: LocalDateTime,
-  emailVerificationToken: VerificationToken,
-  passwordResetToken: VerificationToken,
-  roles: DBRef<Role>[],
-  audit: Audit
+  _id: string,
+  email: string,                // unique index
+  password: string,             // BCrypt hashed
+  emailVerified: boolean,
+  emailVerifiedAt: string | null,   // ISO 8601 timestamp
+  emailVerificationToken: { token: string; expiresAt: string } | null,
+  passwordResetToken: { token: string; expiresAt: string } | null,
+  profileImageId?: string,      // optional
+  failedLoginAttempts: number,  // default 0
+  locked: boolean,
+  twoFactorConfig: { secret: string; verified: boolean } | null,
+  roles: { $ref: string; $id: string }[],  // DBRefs to roles
+  audit: {
+    createdAt: string,
+    updatedAt: string,
+    deletedAt: string | null
+  }
 }
 ```
 
@@ -27,8 +35,12 @@ Stores user authentication information.
 | `password` | string | Yes | BCrypt hashed password |
 | `emailVerified` | Boolean | Yes | Verification status |
 | `emailVerifiedAt` | DateTime | No | Verification timestamp |
-| `emailVerificationToken` | Token | No | Pending verification |
-| `passwordResetToken` | Token | No | Pending reset |
+| `emailVerificationToken` | Token | No | Pending verification token |
+| `passwordResetToken` | Token | No | Pending password reset token |
+| `profileImageId` | ObjectId | No | Reference to uploaded profile image |
+| `failedLoginAttempts` | integer | Yes | Failed login count (default 0) |
+| `locked` | boolean | Yes | Whether account is locked |
+| `twoFactorConfig` | TotpConfig | No | TOTP configuration if 2FA is enabled |
 | `roles` | DBRef[] | Yes | Assigned roles |
 | `audit` | Audit | Yes | Timestamps |
 
@@ -65,10 +77,14 @@ Stores role definitions with grant references.
 
 ```typescript
 {
-  _id: ObjectId,
+  _id: string,
   name: string,           // unique index
-  grants: DBRef<Grant>[],
-  audit: Audit
+  grants: { $ref: string; $id: string }[],  // DBRefs to grants
+  audit: {
+    createdAt: string,
+    updatedAt: string,
+    deletedAt: string | null
+  }
 }
 ```
 
@@ -105,10 +121,14 @@ Stores individual permission definitions.
 
 ```typescript
 {
-  _id: ObjectId,
+  _id: string,
   name: string,           // unique index
   description: string,
-  audit: Audit
+  audit: {
+    createdAt: string,
+    updatedAt: string,
+    deletedAt: string | null
+  }
 }
 ```
 
@@ -155,11 +175,11 @@ Stores active refresh tokens for token rotation.
 
 ```typescript
 {
-  _id: ObjectId,
+  _id: string,
   token: string,
-  userId: ObjectId,
-  expiresAt: Instant,
-  createdAt: Instant
+  userId: string,
+  expiresAt: string,   // ISO 8601 timestamp
+  createdAt: string
 }
 ```
 
@@ -171,12 +191,12 @@ Tracks email sending history for verification and password reset.
 
 ```typescript
 {
-  _id: ObjectId,
-  userId: ObjectId,
-  emailType: EmailType,
-  status: EmailSendStatus,
-  sentAt: Instant,
-  error: string
+  _id: string,
+  userId: string,
+  emailType: 'VERIFICATION' | 'PASSWORD_RESET',
+  status: 'PENDING' | 'SENT' | 'FAILED',
+  sentAt: string,     // ISO 8601 timestamp
+  error: string | null
 }
 ```
 
@@ -194,3 +214,112 @@ Tracks email sending history for verification and password reset.
 | `PENDING` | Queued for sending |
 | `SENT` | Successfully sent |
 | `FAILED` | Send failed |
+
+---
+
+## oauth_clients
+
+Registered OAuth 2.0 clients allowed to initiate the authorization flow.
+
+```typescript
+{
+  _id: string,
+  clientId: string,       // unique
+  clientSecretHash: string,
+  allowedOrigins: string[],
+  redirectUris: string[],
+  createdAt: string       // ISO 8601 timestamp
+}
+```
+
+---
+
+## authorization_requests
+
+Short-lived records representing in-progress authorization requests (created by `GET /oauth2/authorize`, consumed after login).
+
+```typescript
+{
+  _id: string,
+  clientId: string,
+  redirectUri: string,
+  codeChallenge: string,
+  codeChallengeMethod: string,
+  scope: string,
+  state: string,
+  nonce: string,
+  createdAt: string     // ISO 8601 timestamp
+}
+```
+
+---
+
+## authorization_codes
+
+Single-use authorization codes issued after successful login, exchanged for tokens at `/oauth2/token`.
+
+```typescript
+{
+  _id: string,
+  code: string,           // unique
+  clientId: string,
+  userId: string,
+  redirectUri: string,
+  codeChallenge: string,
+  scope: string,
+  state: string,
+  nonce: string,
+  expiresAt: string,      // ISO 8601 timestamp
+  usedAt: string | null
+}
+```
+
+---
+
+## oauth_tokens
+
+Issued access tokens.
+
+```typescript
+{
+  _id: string,
+  token: string,          // unique
+  userId: string,
+  clientId: string,
+  scope: string,
+  expiresAt: string,      // ISO 8601 timestamp
+  revokedAt: string | null
+}
+```
+
+---
+
+## mfa_tokens
+
+Short-lived tokens used during the MFA step of the authorization flow. Created when login succeeds but the account has TOTP enabled; consumed when the TOTP code is verified.
+
+```typescript
+{
+  _id: string,
+  token: string,              // unique
+  authorizationCodeId: string,
+  expiresAt: string           // ISO 8601 timestamp
+}
+```
+
+---
+
+## server_keys
+
+RSA key pairs used to sign JWTs. The active key is rotated on a schedule.
+
+```typescript
+{
+  _id: string,
+  kid: string,        // key ID included in JWT header
+  publicKey: string,  // PEM encoded
+  privateKey: string, // PEM encoded, encrypted at rest
+  createdAt: string,  // ISO 8601 timestamp
+  expiresAt: string
+}
+```

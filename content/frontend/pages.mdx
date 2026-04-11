@@ -4,37 +4,67 @@
 
 ```
 app/
-├── page.tsx                    # / (redirect to dashboard)
+├── page.tsx                        # / (home with activity feed)
+├── homeContent.tsx
 ├── auth/
-│   ├── login/page.tsx          # /auth/login
-│   └── unauthorized/page.tsx   # /auth/unauthorized
+│   ├── login/page.tsx              # /auth/login
+│   ├── unauthorized/page.tsx       # /auth/unauthorized
+│   └── roles/page.tsx              # /auth/roles
 └── dashboard/
     ├── (overview)/
-    │   └── page.tsx            # /dashboard
-    ├── invoices/
-    │   ├── page.tsx            # /dashboard/invoices
-    │   ├── create/page.tsx     # /dashboard/invoices/create
-    │   └── [id]/
-    │       └── edit/page.tsx   # /dashboard/invoices/:id/edit
-    └── customers/
-        └── page.tsx            # /dashboard/customers
+    │   └── page.tsx                # /dashboard
+    └── invoices/
+        ├── page.tsx                # /dashboard/invoices
+        ├── create/page.tsx         # /dashboard/invoices/create
+        └── [id]/
+            ├── page.tsx            # /dashboard/invoices/:id
+            └── edit/page.tsx       # /dashboard/invoices/:id/edit
 ```
+
+---
+
+## Home
+
+**Route**: `/`
+
+Landing page with a welcome message, a link to the dashboard, and a real-time activity feed powered by WebSocket.
+
+### Features
+- Welcome hero section
+- Link to `/dashboard`
+- Activity feed (live updates via WebSocket at `/ws`)
+
+### API Calls
+- `GET /api/v1/activity/recent` — initial activity events (default limit: 50)
+- WebSocket `/ws` — subscribes to live activity events
+
+---
 
 ## Dashboard Overview
 
 **Route**: `/dashboard`
 
-The main dashboard page displaying key metrics and recent activity.
+Main dashboard page displaying key metrics and recent data.
 
 ### Features
 - Total revenue card
-- Pending invoices count
-- Paid invoices count
+- Pending invoices count and amount
+- Paid invoices count and amount
 - Customer count
 - Revenue chart (monthly)
 - Latest invoices list
 
-### Screenshot Areas
+### API Calls
+- `GET /api/v1/invoices/count?status=pending`
+- `GET /api/v1/invoices/count?status=paid`
+- `GET /api/v1/invoices/amount?status=pending`
+- `GET /api/v1/invoices/amount?status=paid`
+- `GET /api/v1/customers/count`
+- `GET /api/v1/revenues/`
+- `GET /api/v1/invoices/latest`
+
+### Layout
+
 ```
 ┌─────────────────────────────────────────────────────┐
 │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐  │
@@ -43,10 +73,8 @@ The main dashboard page displaying key metrics and recent activity.
 │  └─────────┘ └─────────┘ └─────────┘ └─────────┘  │
 │                                                     │
 │  ┌─────────────────────┐ ┌───────────────────────┐ │
-│  │                     │ │                       │ │
-│  │   Revenue Chart     │ │   Latest Invoices    │ │
-│  │     (Monthly)       │ │       List           │ │
-│  │                     │ │                       │ │
+│  │   Revenue Chart     │ │   Latest Invoices     │ │
+│  │     (Monthly)       │ │         List          │ │
 │  └─────────────────────┘ └───────────────────────┘ │
 └─────────────────────────────────────────────────────┘
 ```
@@ -60,10 +88,10 @@ The main dashboard page displaying key metrics and recent activity.
 Paginated invoice management page.
 
 ### Features
-- Search functionality (Elasticsearch)
+- Search by customer name or invoice details
 - Pagination controls
-- Status badges (pending/paid)
-- Action buttons (edit, delete)
+- Status badges (`pending` / `paid`)
+- Edit and delete actions
 - Create invoice button
 
 ### Query Parameters
@@ -73,26 +101,43 @@ Paginated invoice management page.
 | `page` | number | Current page (default: 1) |
 | `query` | string | Search term |
 
+### API Calls
+- `POST /api/v1/invoices/search` — paginated search
+- `DELETE /api/v1/invoices/{id}` — delete from table
+
+---
+
+## Invoice Detail
+
+**Route**: `/dashboard/invoices/[id]`
+
+Displays full details for a single invoice.
+
+### Dynamic Segment
+- `[id]` — Invoice ObjectId
+
+### API Calls
+- `GET /api/v1/invoices/{id}`
+
 ---
 
 ## Create Invoice
 
 **Route**: `/dashboard/invoices/create`
 
-Form to create new invoices.
+Form to create a new invoice.
 
 ### Form Fields
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| Customer | Select | Yes | Customer dropdown |
+| Customer | Select | Yes | Customer dropdown (loaded from API) |
 | Amount | Number | Yes | Invoice amount |
-| Status | Select | Yes | pending / paid |
+| Status | Select | Yes | `pending` or `paid` |
 
-### Validation
-- Customer must be selected
-- Amount must be positive number
-- Status required
+### API Calls
+- `GET /api/v1/customers/` — populate customer dropdown
+- `POST /api/v1/invoices/` — submit form
 
 ---
 
@@ -100,28 +145,15 @@ Form to create new invoices.
 
 **Route**: `/dashboard/invoices/[id]/edit`
 
-Form to edit existing invoices.
+Pre-filled form to edit an existing invoice.
 
 ### Dynamic Segment
-- `[id]` - Invoice ObjectId
+- `[id]` — Invoice ObjectId
 
-### Features
-- Pre-filled form data
-- Same validation as create
-- Update button
-
----
-
-## Customers
-
-**Route**: `/dashboard/customers`
-
-Customer list display.
-
-### Features
-- Customer cards with avatars
-- Email display
-- Invoice count per customer
+### API Calls
+- `GET /api/v1/invoices/{id}` — load current values
+- `GET /api/v1/customers/` — populate customer dropdown
+- `PUT /api/v1/invoices/{id}` — submit changes
 
 ---
 
@@ -129,7 +161,7 @@ Customer list display.
 
 **Route**: `/auth/login`
 
-Authentication page.
+Authentication page with email/password and TOTP support.
 
 ### Form Fields
 
@@ -137,11 +169,26 @@ Authentication page.
 |-------|------|----------|
 | Email | Email | Yes |
 | Password | Password | Yes |
+| TOTP code | Number | Conditional (if 2FA enabled) |
 
 ### Features
-- Form validation
+- Login and register tabs
+- TOTP setup and verification steps
 - Error messages
-- Redirect after login
+- Redirect to `/dashboard` after login
+
+---
+
+## Roles & Grants
+
+**Route**: `/auth/roles`
+
+Role and grant management for administrators.
+
+### Features
+- List of roles with their assigned grants
+- Create new grants
+- Manage per-role permissions
 
 ---
 
@@ -149,7 +196,7 @@ Authentication page.
 
 **Route**: `/auth/unauthorized`
 
-Access denied page shown when user lacks permissions.
+Access denied page shown when the user lacks a required grant.
 
 ### Features
 - Error message
@@ -162,43 +209,18 @@ Access denied page shown when user lacks permissions.
 
 ### Root Layout
 Applied to all pages:
-- HTML structure
-- Theme provider
+- HTML structure with theme and i18n providers
 - Font loading
+- Dev overlay (development only)
 
 ### Dashboard Layout
 Applied to `/dashboard/*`:
 - Side navigation
-- Header with user menu
 - Theme toggle
+- Language toggle
 
 ---
 
 ## Route Protection
 
-Routes are protected via middleware and server-side checks:
-
-```typescript
-// middleware.ts
-export { default } from 'next-auth/middleware';
-
-export const config = {
-  matcher: ['/dashboard/:path*']
-};
-```
-
-```typescript
-// In page component
-import { getServerSession } from 'next-auth';
-import { redirect } from 'next/navigation';
-
-export default async function ProtectedPage() {
-  const session = await getServerSession(authOptions);
-
-  if (!session) {
-    redirect('/auth/login');
-  }
-
-  return <PageContent />;
-}
-```
+Dashboard routes are protected via server-side session checks. Pages redirect to `/auth/login` if there is no valid session, or to `/auth/unauthorized` if the user lacks the required grant for the resource.

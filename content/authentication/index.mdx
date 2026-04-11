@@ -1,32 +1,44 @@
 # Authentication Overview
 
-The Dashboard uses a separate OAuth service for authentication, implementing JWT-based authentication with refresh token rotation.
+The Dashboard uses a dedicated OAuth service for authentication, implementing the OAuth 2.0 Authorization Code flow with PKCE and OpenID Connect.
 
 ## Authentication Flow
 
 ```
-┌──────────┐     1. Login Request      ┌──────────────┐
-│          │ ────────────────────────► │              │
-│  Client  │                           │ OAuth Service│
-│          │ ◄──────────────────────── │              │
-└──────────┘  2. JWT + Refresh Token   └──────────────┘
-     │
-     │ 3. API Request with JWT
-     ▼
-┌──────────────┐
-│              │
-│ Dashboard API│
-│              │
-└──────────────┘
+┌──────────┐  1. GET /oauth2/authorize   ┌──────────────┐
+│          │ ──────────────────────────► │              │
+│  Client  │  2. 302 → login page        │ OAuth Service│
+│          │ ◄────────────────────────── │  (port 8081) │
+│          │                             │              │
+│          │  3. POST /oauth2/authorize  │              │
+│          │ ──────────────────────────► │              │
+│          │  4. 302 → redirect?code=... │              │
+│          │ ◄────────────────────────── │              │
+│          │                             │              │
+│          │  5. POST /oauth2/token      │              │
+│          │ ──────────────────────────► │              │
+│          │  6. access + refresh tokens │              │
+│          │ ◄────────────────────────── └──────────────┘
+│          │
+│          │  7. API request + Bearer token
+│          │ ──────────────────────────► ┌──────────────┐
+│          │                             │ Dashboard API│
+│          │ ◄────────────────────────── │  (port 8080) │
+└──────────┘                             └──────────────┘
 ```
+
+If MFA is enabled on the account, step 3 returns an `mfa_token` and the client must submit a TOTP code before receiving the authorization code.
 
 ## Key Features
 
-- **JWT Access Tokens** - Short-lived tokens for API access
-- **Refresh Token Rotation** - Secure token refresh with rotation
+- **OAuth 2.0 + PKCE** - Authorization Code flow (RFC 6749 + RFC 7636)
+- **OpenID Connect** - UserInfo endpoint and ID tokens
+- **TOTP / 2FA** - Optional per-account two-factor authentication
+- **Refresh Token Rotation** - Old refresh tokens are invalidated on use
+- **Email Verification** - Account activation via email
+- **Password Reset** - Self-service password reset via email
 - **Role-Based Access** - Users assigned roles with specific grants
-- **Email Verification** - Verify user email addresses
-- **Password Reset** - Secure password reset flow
+- **Account Locking** - Automatic locking after failed login attempts
 
 ## Service URLs
 
@@ -37,6 +49,6 @@ The Dashboard uses a separate OAuth service for authentication, implementing JWT
 
 ## Quick Links
 
-- [Auth Endpoints](/authentication/endpoints) - Login, register, refresh
+- [Auth Endpoints](/authentication/endpoints) - Register, OAuth2 flow, TOTP, password reset
 - [Roles & Grants](/authentication/roles-grants) - Permission management
-- [Frontend Integration](/authentication/frontend-integration) - NextAuth setup
+- [Frontend Integration](/authentication/frontend-integration) - Integration guide

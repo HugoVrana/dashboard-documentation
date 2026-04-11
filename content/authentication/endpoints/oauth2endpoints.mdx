@@ -1,14 +1,19 @@
-# OAuth2 Endpoints
+# Auth Endpoints
 
-Base URL: `/api/auth`
+Base URL: `http://localhost:8081`
+
+> **Note**: The v1 endpoints (`/api/v1/auth/...`) are deprecated and scheduled for removal. Use the v2 endpoints below.
+
+---
 
 ## Register
 
-Creates a new user account.
+Creates a new user account. Requires a valid `X-Client-Id` header from a registered OAuth client.
 
 ```http
-POST /api/auth/register
+POST /api/v2/auth/register
 Content-Type: application/json
+X-Client-Id: <client_id>
 ```
 
 ### Request
@@ -16,12 +21,192 @@ Content-Type: application/json
 ```json
 {
   "email": "user@example.com",
-  "password": "securePassword123",
+  "password": "SecurePassword1!",
   "roleId": "507f1f77bcf86cd799439011"
 }
 ```
 
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `email` | string | Yes | Valid email address |
+| `password` | string | Yes | Min 8 chars, must be strong |
+| `roleId` | string | Yes | ObjectId of the role to assign |
+
 ### Response `201 Created`
+
+```json
+{
+  "user": {
+    "id": "507f1f77bcf86cd799439012",
+    "email": "user@example.com",
+    "roleReads": [{ "id": "...", "name": "user", "grants": [] }],
+    "profileImageUrl": null
+  },
+  "accessToken": "eyJ...",
+  "requiresTwoFactorEnrollment": false,
+  "nextStep": null
+}
+```
+
+| Code | Description |
+|------|-------------|
+| `401` | Missing or invalid `X-Client-Id` |
+| `403` | Request origin not allowed for this client |
+| `409` | Email already registered |
+
+---
+
+## OAuth2 Authorization Flow (PKCE)
+
+The primary authentication flow follows OAuth 2.0 Authorization Code with PKCE (RFC 6749 + RFC 7636).
+
+### Step 1 — Initiate authorization
+
+```http
+GET /api/v2/oauth2/authorize
+  ?response_type=code
+  &client_id=<client_id>
+  &redirect_uri=<redirect_uri>
+  &code_challenge=<S256_challenge>
+  &code_challenge_method=S256
+  &state=<random_state>
+  &scope=openid
+```
+
+Redirects `302` to the login page with a `request_id` parameter. Only `response_type=code` and `code_challenge_method=S256` are supported.
+
+### Step 2 — Submit credentials
+
+```http
+POST /api/v2/oauth2/authorize
+Content-Type: application/x-www-form-urlencoded
+
+request_id=<from_step1>&username=user@example.com&password=Secret1!
+```
+
+**Success (no MFA)** — redirects `302` to `redirect_uri?code=...&state=...`
+
+**MFA required** — returns `200`:
+
+```json
+{
+  "mfa_required": true,
+  "mfa_token": "<token>"
+}
+```
+
+| Code | Description |
+|------|-------------|
+| `302 → redirect_uri?error=access_denied` | Invalid credentials, locked account, or unverified email |
+| `400` | Invalid `request_id` |
+
+### Step 3 (conditional) — Complete MFA
+
+```http
+POST /api/v2/oauth2/authorize/mfa
+Content-Type: application/x-www-form-urlencoded
+
+mfa_token=<from_step2>&totp_code=123456
+```
+
+Redirects `302` to `redirect_uri?code=...&state=...` on success.
+
+| Code | Description |
+|------|-------------|
+| `401` | Invalid TOTP code |
+| `400` | Invalid or expired `mfa_token` |
+
+### Step 4 — Exchange code for tokens
+
+```http
+POST /api/v2/oauth2/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=authorization_code
+&code=<authorization_code>
+&code_verifier=<pkce_verifier>
+&client_id=<client_id>
+&redirect_uri=<redirect_uri>
+```
+
+### Response `200 OK`
+
+```json
+{
+  "access_token": "eyJ...",
+  "refresh_token": "dGhp...",
+  "id_token": "eyJ...",
+  "token_type": "Bearer",
+  "expires_in": 900,
+  "scope": "openid"
+}
+```
+
+---
+
+## Token Refresh
+
+```http
+POST /api/v2/oauth2/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=refresh_token&refresh_token=<refresh_token>
+```
+
+Returns the same token response shape as the code exchange. The old refresh token is invalidated (rotation).
+
+---
+
+## Token Revocation (RFC 7009)
+
+```http
+POST /api/v2/oauth2/revoke
+Content-Type: application/x-www-form-urlencoded
+
+token=<token>&token_type_hint=access_token
+```
+
+Always returns `200 OK` even if the token is already invalid.
+
+---
+
+## Token Introspection (RFC 7662)
+
+For resource servers to validate tokens. Requires HTTP Basic auth with a service client secret.
+
+```http
+POST /api/v2/oauth2/introspect
+Content-Type: application/x-www-form-urlencoded
+Authorization: Basic <base64(client_id:client_secret)>
+
+token=<token>
+```
+
+### Response `200 OK`
+
+```json
+{
+  "active": true,
+  "sub": "507f1f77bcf86cd799439012",
+  "exp": 1704070800,
+  "scope": "openid"
+}
+```
+
+If the token is invalid or expired, `active` is `false`.
+
+---
+
+## UserInfo (OIDC Core §5.3)
+
+Returns claims for the authenticated user.
+
+```http
+GET /api/v2/oauth2/userinfo
+Authorization: Bearer <access_token>
+```
+
+### Response `200 OK`
 
 ```json
 {
@@ -30,130 +215,24 @@ Content-Type: application/json
   "roleReads": [
     {
       "id": "507f1f77bcf86cd799439011",
-      "name": "user",
-      "grants": [
-        {
-          "id": "507f1f77bcf86cd799439013",
-          "name": "dashboard-invoices-read",
-          "description": "Read invoice data"
-        }
-      ]
+      "name": "admin",
+      "grants": [{ "id": "...", "name": "dashboard-invoices-read", "description": "..." }]
     }
-  ]
+  ],
+  "profileImageUrl": null
 }
 ```
-
-### Response `400 BAD REQUEST`
-
-Invalid request data or validation failed.
-
-### Response `404 NOT FOUND`
-
-Role ID does not exist.
-
-### Response `409 CONFLICT`
-
-A user with this email already exists.
 
 ---
 
-## Login
+## TOTP / Two-Factor Authentication
 
-Authenticates a user and returns tokens.
+TOTP endpoints are under `/api/v2/auth/2fa` and require a valid Bearer token.
 
-```http
-POST /api/auth/login
-Content-Type: application/json
-```
-
-### Request
-
-```json
-{
-  "email": "user@example.com",
-  "password": "securePassword123"
-}
-```
-
-### Response `200 OK`
-
-```json
-{
-  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refreshToken": "dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4...",
-  "user": {
-    "id": "507f1f77bcf86cd799439012",
-    "email": "user@example.com",
-    "roleReads": [...]
-  }
-}
-```
-
-### Response `401 UNAUTHORIZED`
-
-Invalid email or password.
-
----
-
-## Refresh Token
-
-Exchanges a refresh token for new tokens.
+### Set up TOTP
 
 ```http
-POST /api/auth/refresh
-Content-Type: application/json
-```
-
-### Request
-
-```json
-{
-  "refreshToken": "dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4..."
-}
-```
-
-### Response `200 OK`
-
-```json
-{
-  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refreshToken": "bmV3IHJlZnJlc2ggdG9rZW4..."
-}
-```
-
-> **Note**: The old refresh token is invalidated (rotation).
-
-### Response `401 UNAUTHORIZED`
-
-Invalid or expired refresh token.
-
----
-
-## Logout
-
-Invalidates the user's refresh tokens.
-
-```http
-POST /api/auth/logout
-Authorization: Bearer <access_token>
-```
-
-### Response `200 OK`
-
-No body.
-
-### Response `401 UNAUTHORIZED`
-
-Missing or invalid access token.
-
----
-
-## Get Current User
-
-Returns the authenticated user's information.
-
-```http
-GET /api/auth/me
+POST /api/v2/auth/2fa/setup
 Authorization: Bearer <access_token>
 ```
 
@@ -161,165 +240,192 @@ Authorization: Bearer <access_token>
 
 ```json
 {
-  "id": "507f1f77bcf86cd799439012",
-  "email": "user@example.com",
-  "roleReads": [...]
+  "qrCodeDataUri": "data:image/png;base64,...",
+  "secret": "JBSWY3DPEHPK3PXP"
 }
 ```
 
-### Response `401 UNAUTHORIZED`
+Display the QR code or secret to the user so they can add it to their authenticator app.
 
-Missing or invalid access token.
-
----
-
-## Verify Email
-
-Verifies the user's email address.
+### Verify TOTP
 
 ```http
-POST /api/auth/verify-email?token=verification_token_here
-```
-
-### Response `200 OK`
-
-No body.
-
-### Response `400 BAD REQUEST`
-
-Invalid or expired verification token.
-
----
-
-## Forgot Password
-
-Initiates the password reset flow.
-
-```http
-POST /api/auth/forgot-password
+POST /api/v2/auth/2fa/verify
+Authorization: Bearer <access_token>
 Content-Type: application/json
 ```
 
-### Request
-
 ```json
 {
-  "email": "user@example.com"
+  "code": "123456"
 }
 ```
 
-### Response `200 OK`
-
-No body. Email sent if user exists.
+Returns `200 OK` if the code is valid, `400 Bad Request` if invalid.
 
 ---
 
-## Reset Password
+## Password Reset (self-service)
 
-Resets the user's password.
+### Request reset email
 
 ```http
-POST /api/auth/reset-password
+POST /api/v1/auth/forgot-password
 Content-Type: application/json
 ```
 
-### Request
-
 ```json
-{
-  "token": "password_reset_token",
-  "newPassword": "newSecurePassword456"
-}
+{ "email": "user@example.com" }
 ```
 
-### Response `200 OK`
+Always returns `200 OK` (does not reveal whether the email exists).
 
-No body.
-
-### Response `400 BAD REQUEST`
-
-Invalid or expired reset token.
-
----
-
-## Add Role to User
-
-Assigns an additional role to a user.
+### Validate reset token
 
 ```http
-POST /api/auth/user/role
+GET /api/v1/auth/validate-reset-token?token=<reset_token>
+```
+
+Returns `200 OK` with `{ "valid": true }` or `400` with `{ "valid": false }`.
+
+### Reset password
+
+```http
+POST /api/v1/auth/reset-password
 Content-Type: application/json
 ```
 
-### Request
+```json
+{
+  "token": "<reset_token>",
+  "newPassword": "NewSecurePassword1!"
+}
+```
+
+Returns `200 OK` on success, `400` if token is invalid or expired.
+
+---
+
+## Email Verification
+
+```http
+POST /api/v1/auth/verify-email?token=<verification_token>
+```
+
+Returns `200 OK` on success, `400` if token is invalid or expired.
+
+---
+
+## OIDC Discovery
+
+Standard OpenID Connect discovery endpoints. No authentication required.
+
+```http
+GET /.well-known/openid-configuration
+```
+
+Returns the full OIDC provider metadata including all endpoint URLs, supported scopes, response types, and signing algorithms.
+
+```http
+GET /.well-known/jwks.json
+```
+
+Returns the RSA public key set (RFC 7517) used to verify JWT signatures. Resource servers should cache this and refresh it on unknown `kid`.
+
+---
+
+## OAuth Client Management
+
+Manage registered OAuth2 clients. Requires admin grants.
+
+### Get client
+
+```http
+GET /api/v2/oauthclients/{id}
+Authorization: Bearer <access_token>
+```
+
+### Register client
+
+**Required Grant**: `dashboard-oauth-client-create`
+
+```http
+POST /api/v2/oauthclients/
+Authorization: Bearer <access_token>
+Content-Type: application/json
+```
 
 ```json
 {
-  "userId": "507f1f77bcf86cd799439012",
-  "roleId": "507f1f77bcf86cd799439011"
+  "allowedOrigins": ["http://localhost:3000"],
+  "redirectUris": ["http://localhost:3000/api/auth/callback"]
 }
+```
+
+Returns `OAuthClientCreated` which includes the `clientSecret`. **The secret is shown only once.**
+
+### Delete client
+
+**Required Grant**: `dashboard-oauth-client-delete`
+
+```http
+DELETE /api/v2/oauthclients/{id}
+Authorization: Bearer <access_token>
+```
+
+### Rotate client secret
+
+```http
+POST /api/v2/oauthclients/{id}/secret
+Authorization: Bearer <access_token>
+```
+
+Invalidates the old secret immediately. Returns a new `OAuthClientCreated` with the new secret. **Shown only once.**
+
+---
+
+## Service Endpoints
+
+Machine-to-machine endpoints for trusted backend services. Authenticated with HTTP Basic using the service client credentials.
+
+### Ensure grants exist
+
+Called by downstream services on startup to idempotently register the grants they require.
+
+```http
+POST /api/v2/service/grants/ensure
+Authorization: Basic <base64(client_id:client_secret)>
+Content-Type: application/json
+```
+
+```json
+[
+  { "name": "dashboard-invoices-read", "description": "Read invoice data" },
+  { "name": "dashboard-invoices-create", "description": "Create invoices" }
+]
 ```
 
 ### Response `200 OK`
 
 ```json
 {
-  "user": {
-    "id": "507f1f77bcf86cd799439012",
-    "email": "user@example.com",
-    "roleReads": [...]
-  }
+  "created": ["dashboard-invoices-create"],
+  "existing": ["dashboard-invoices-read"]
 }
 ```
 
-### Response `400 BAD REQUEST`
-
-Invalid user ID or role ID format.
-
-### Response `404 NOT FOUND`
-
-User or role not found.
-
-### Response `409 CONFLICT`
-
-User already has this role assigned.
-
 ---
 
-## Error Responses
+## Error Format
 
-All endpoints may return these common error codes:
-
-| Code | Exception | Description |
-|------|-----------|-------------|
-| `400` | `InvalidRequestException` | Invalid request data or validation failed |
-| `401` | `ResponseStatusException` | Invalid credentials or missing/expired token |
-| `404` | `ResourceNotFoundException` | Requested resource not found |
-| `409` | `ConflictException` | Resource conflict (e.g., duplicate email, role already assigned) |
-| `500` | `Exception` | Internal server error |
-
-### Error Response Format
-
-Errors are returned using the RFC 7807 Problem Details format:
+Errors use RFC 7807 Problem Details:
 
 ```json
 {
   "type": "about:blank",
   "title": "Conflict",
   "status": 409,
-  "detail": "User already has this role",
-  "instance": "/api/auth/user/role"
-}
-```
-
-For validation errors (`400`):
-
-```json
-{
-  "type": "about:blank",
-  "title": "Validation failed",
-  "status": 400,
-  "detail": "Email must be a valid email address",
-  "instance": "/api/auth/register"
+  "detail": "User with this email already exists",
+  "instance": "/api/v2/auth/register"
 }
 ```

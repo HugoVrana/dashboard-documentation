@@ -1,27 +1,36 @@
 # Activity Endpoints
 
-Base URL: `/api/activity`
+Activity endpoints on the Auth service mirror those on the Dashboard API. Base URL: `http://localhost:8081`
 
-### Recent
+## Get Recent Activity
 
-Gets the latest activities
 ```http
-GET /api/activity/recent
+GET /api/v2/activity/recent?limit=50
 ```
 
+### Query Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `limit` | integer | No | 50 | Maximum events to return |
+
 ### Response `200 OK`
-Returns latest events
+
 ```json
 [
   {
     "id": "507f1f77bcf86cd799439011",
-    "type": "pending",
+    "type": "USER_REGISTERED",
     "actorId": "507f1f77bcf86cd799439013",
-    "actorName": "User Name",
-    "timestamp" : "2025-01-01 08:00.0000",
-    "metadata" : [
-      {"key" : "value"}
-        ]
+    "actorName": "Jane Smith",
+    "timestamp": "2025-01-01T08:00:00.000Z",
+    "metadata": [
+      { "key": "value" }
+    ]
   }
 ]
 ```
+
+## WebSocket
+
+Real-time activity events are also available via WebSocket at `ws://localhost:8081/ws`.

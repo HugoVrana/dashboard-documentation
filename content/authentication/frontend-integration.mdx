@@ -1,62 +1,62 @@
 # Frontend Integration
 
-The frontend uses **NextAuth.js** to manage authentication state.
+The frontend uses **NextAuth.js** for session management combined with a custom OAuth2 PKCE flow to authenticate against the auth service.
+
+## Login Flow
+
+Authentication is handled through Next.js server actions in `app/auth/actions/loginActions.ts`. The flow follows OAuth2 Authorization Code + PKCE:
+
+```
+Frontend                           Auth Service
+   │                                    │
+   │── initiatePkceAction() ──────────► │ GET /api/v2/oauth2/authorize
+   │                                    │   validates client, creates request
+   │◄── request_id ─────────────────── │ 302 → login page?request_id=...
+   │                                    │
+   │── loginAction(email, password) ──► │ POST /api/v2/oauth2/authorize
+   │                                    │   validates credentials
+   │                              ┌─────┤
+   │                        MFA?  │ No  │ 302 → redirect?code=...
+   │                              │ Yes │ 200 { mfa_required, mfa_token }
+   │                              └─────┤
+   │── completeMfaLoginAction(totp) ──► │ POST /api/v2/oauth2/authorize/mfa
+   │                                    │ 302 → redirect?code=...
+   │                                    │
+   │── completePkceCallbackAction() ──► │ POST /api/v2/oauth2/token
+   │◄── { access_token, refresh_token } │
+   │── signIn() → NextAuth session ───► session stored
+```
+
+PKCE state (code verifier) and MFA tokens are stored in **encrypted httpOnly cookies** (`pkce_state`, `mfa_pending`) between steps using AES-256-GCM.
 
 ## NextAuth Configuration
 
+NextAuth manages the session after the OAuth2 flow completes. The JWT callback stores the access token, refresh token, roles, and grants.
+
 ```typescript
-// app/api/auth/[...nextauth]/route.ts
-import NextAuth from 'next-auth';
-import CredentialsProvider from 'next-auth/providers/credentials';
-
-export const authOptions = {
-  providers: [
-    CredentialsProvider({
-      name: 'credentials',
-      credentials: {
-        email: { label: 'Email', type: 'email' },
-        password: { label: 'Password', type: 'password' }
-      },
-      async authorize(credentials) {
-        const res = await fetch(
-          `${process.env.AUTH_URL}/api/auth/login`,
-          {
-            method: 'POST',
-            body: JSON.stringify(credentials),
-            headers: { 'Content-Type': 'application/json' }
-          }
-        );
-
-        const data = await res.json();
-
-        if (res.ok && data) {
-          return {
-            id: data.user.id,
-            email: data.user.email,
-            accessToken: data.accessToken,
-            refreshToken: data.refreshToken,
-            roles: data.user.roleReads
-          };
-        }
-
-        return null;
-      }
-    })
-  ],
-
+// app/auth/auth.ts (approximate structure)
+export const { handlers, signIn, signOut, auth } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
         token.accessToken = user.accessToken;
         token.refreshToken = user.refreshToken;
-        token.roles = user.roles;
+        token.expiresAt = Date.now() + user.expiresIn * 1000;
+        token.role = user.role;
+        token.grants = user.grants;
+        token.url = user.url;
       }
       return token;
     },
 
     async session({ session, token }) {
       session.accessToken = token.accessToken;
-      session.user.roles = token.roles;
+      session.refreshToken = token.refreshToken;
+      session.expiresAt = token.expiresAt;
+      session.url = token.url;
+      session.user.id = token.id;
+      session.user.role = token.role;
+      session.user.grants = token.grants;
       return session;
     }
   },
@@ -65,69 +65,44 @@ export const authOptions = {
     signIn: '/auth/login',
     error: '/auth/unauthorized'
   }
-};
-
-const handler = NextAuth(authOptions);
-export { handler as GET, handler as POST };
+});
 ```
 
-## TypeScript Declarations
-
-Extend NextAuth types for custom fields:
+## Session Shape
 
 ```typescript
-// app/models/auth/next-auth.d.ts
-import 'next-auth';
-
-declare module 'next-auth' {
-  interface Session {
-    accessToken: string;
-    user: {
-      id: string;
-      email: string;
-      roles: Role[];
-    };
-  }
-
-  interface User {
-    accessToken: string;
-    refreshToken: string;
-    roles: Role[];
-  }
-}
-
-declare module 'next-auth/jwt' {
-  interface JWT {
-    accessToken: string;
-    refreshToken: string;
-    roles: Role[];
-  }
+// app/auth/models/next-auth.d.ts
+interface Session {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: number;        // Unix ms timestamp
+  url: string;              // Auth service base URL
+  user: {
+    id: string;
+    role: Role[];
+    grants: string[];       // flattened permission names
+    image?: string | null;
+  } & DefaultSession['user'];
 }
 ```
 
-## Using Authentication
+## Using the Session
 
 ### Server Components
 
 ```typescript
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { auth } from '@/auth';
+import { redirect } from 'next/navigation';
 
 export default async function ProtectedPage() {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
 
   if (!session) {
     redirect('/auth/login');
   }
 
-  // Use session.accessToken for API calls
-  const data = await fetch(`${API_URL}/invoices/`, {
-    headers: {
-      'Authorization': `Bearer ${session.accessToken}`
-    }
-  });
-
-  return <div>Protected content</div>;
+  const invoices = await getAllInvoices(session.accessToken);
+  return <InvoiceList invoices={invoices} />;
 }
 ```
 
@@ -135,124 +110,60 @@ export default async function ProtectedPage() {
 
 ```typescript
 'use client';
+import { useSession } from 'next-auth/react';
 
-import { useSession, signIn, signOut } from 'next-auth/react';
-
-export function AuthButton() {
-  const { data: session, status } = useSession();
-
-  if (status === 'loading') {
-    return <div>Loading...</div>;
-  }
-
-  if (session) {
-    return (
-      <>
-        <span>Signed in as {session.user.email}</span>
-        <button onClick={() => signOut()}>Sign out</button>
-      </>
-    );
-  }
-
-  return <button onClick={() => signIn()}>Sign in</button>;
-}
-```
-
-## Token Refresh
-
-Implement automatic token refresh:
-
-```typescript
-// In NextAuth callbacks
-async jwt({ token, user }) {
-  if (user) {
-    token.accessToken = user.accessToken;
-    token.refreshToken = user.refreshToken;
-    token.accessTokenExpires = Date.now() + 15 * 60 * 1000; // 15 min
-  }
-
-  // Return previous token if not expired
-  if (Date.now() < token.accessTokenExpires) {
-    return token;
-  }
-
-  // Refresh the token
-  return refreshAccessToken(token);
-}
-
-async function refreshAccessToken(token) {
-  try {
-    const response = await fetch(
-      `${process.env.AUTH_URL}/api/auth/refresh`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken: token.refreshToken })
-      }
-    );
-
-    const refreshed = await response.json();
-
-    if (!response.ok) throw refreshed;
-
-    return {
-      ...token,
-      accessToken: refreshed.accessToken,
-      refreshToken: refreshed.refreshToken,
-      accessTokenExpires: Date.now() + 15 * 60 * 1000
-    };
-  } catch (error) {
-    return { ...token, error: 'RefreshAccessTokenError' };
-  }
+export function UserMenu() {
+  const { data: session } = useSession();
+  if (!session) return null;
+  return <span>{session.user.email}</span>;
 }
 ```
 
 ## Permission Checking
 
-Check user grants in components:
+Grants are stored flat in the session — no extra API call needed:
 
 ```typescript
-// lib/permission/permissionsServerClient.ts
-import { getServerSession } from 'next-auth';
+import { auth } from '@/auth';
 
-export async function hasGrant(grantName: string): Promise<boolean> {
-  const session = await getServerSession(authOptions);
-
-  if (!session?.user?.roles) return false;
-
-  return session.user.roles.some(role =>
-    role.grants.some(grant => grant.name === grantName)
-  );
-}
-
-// Usage in page
 export default async function InvoicesPage() {
-  const canCreate = await hasGrant('dashboard-invoices-create');
+  const session = await auth();
+  const canCreate = session?.user.grants.includes('dashboard-invoices-create');
+  const canDelete = session?.user.grants.includes('dashboard-invoices-delete');
 
   return (
     <div>
       {canCreate && <CreateInvoiceButton />}
-      <InvoiceList />
+      <InvoiceTable canDelete={canDelete} />
     </div>
   );
 }
 ```
 
+## Token Refresh
+
+Handled automatically in the NextAuth JWT callback: `expiresAt` is compared against the current time, and `POST /api/v2/oauth2/token` with `grant_type=refresh_token` is called when the access token has expired. The old refresh token is invalidated (rotation).
+
+## TOTP Setup
+
+After registration, if `requiresTwoFactorEnrollment: true`, the frontend calls:
+
+```typescript
+// app/auth/actions/totpActions.ts
+setupTotp(accessToken: string): Promise<TotpSetupResponse>
+// Returns { qrCodeDataUri, secret }
+
+verifyTotp(code: string, accessToken: string): Promise<boolean>
+```
+
+The QR code is shown in `totpSetupStep.tsx`. After scanning and entering the 6-digit code, 2FA is activated on the account.
+
 ## Environment Variables
 
 ```env
-# .env.local
+NEXT_PUBLIC_AUTH_URL=http://localhost:8081
+
+# NextAuth (also accepts NEXTAUTH_SECRET)
+AUTH_SECRET=your-secret-key-here
 NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET=your-secret-key-here
-
-# OAuth Service
-AUTH_URL=http://localhost:8081
 ```
-
-## Security Best Practices
-
-1. **Secret Management**: Use strong `NEXTAUTH_SECRET`
-2. **HTTPS**: Always use HTTPS in production
-3. **Token Storage**: NextAuth handles secure storage
-4. **Session Duration**: Configure appropriate timeouts
-5. **Error Handling**: Don't expose sensitive error details

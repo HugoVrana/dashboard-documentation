@@ -15,4 +15,14 @@ export default withNextra({
   },
   basePath: '/dashboard-documentation',
   assetPrefix: '/dashboard-documentation',
+  async redirects() {
+    return [
+      {
+        source: '/',
+        destination: '/dashboard-documentation',
+        permanent: false,
+        basePath: false,
+      },
+    ]
+  },
 })

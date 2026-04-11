@@ -1,255 +1,154 @@
 # Components
 
-## Base Components
+## Dashboard Components
 
-Located in `app/ui/base/`, built on **Base UI** and **Radix UI** primitives.
+Located in `app/dashboard/components/`.
 
-### Installation
+### Metric Cards
 
-Install base components with shadcn wrapper:
-
-```bash
-npx shadcn@latest add <component-name>
-```
-
-### Available Components
-
-| Component | File | Description |
-|-----------|------|-------------|
-| Button | `button.tsx` | Primary button with variants |
-| Card | `card.tsx` | Container card |
-| Input | `input.tsx` | Text input field |
-| Label | `label.tsx` | Form label |
-| Select | `select.tsx` | Dropdown select |
-| Combobox | `combobox.tsx` | Searchable dropdown |
-| Badge | `badge.tsx` | Status badges |
-| Tabs | `tabs.tsx` | Tab navigation |
-| AlertDialog | `alert-dialog.tsx` | Confirmation dialogs |
-| DropdownMenu | `dropdown-menu.tsx` | Context menus |
-| NavigationMenu | `navigation-menu.tsx` | Navigation |
-| ScrollArea | `scroll-area.tsx` | Scrollable container |
-| Separator | `separator.tsx` | Visual divider |
-| Switch | `switch.tsx` | Toggle switch |
-| Textarea | `textarea.tsx` | Multi-line input |
-| Field | `field.tsx` | Form field wrapper |
-| InputGroup | `input-group.tsx` | Input with addons |
-
-### Button Example
+Displays key statistics on the dashboard overview.
 
 ```tsx
-import { Button } from '@/app/ui/base/button';
-
-<Button variant="default">Primary</Button>
-<Button variant="secondary">Secondary</Button>
-<Button variant="destructive">Delete</Button>
-<Button variant="outline">Outline</Button>
-<Button variant="ghost">Ghost</Button>
+// app/dashboard/components/dashboard/cards/cards.tsx
+import { Cards } from '@/app/dashboard/components/dashboard/cards/cards';
 ```
 
-### Card Example
-
-```tsx
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter
-} from '@/app/ui/base/card';
-
-<Card>
-  <CardHeader>
-    <CardTitle>Invoice</CardTitle>
-    <CardDescription>Invoice details</CardDescription>
-  </CardHeader>
-  <CardContent>
-    <p>Amount: $1,500.00</p>
-  </CardContent>
-  <CardFooter>
-    <Button>Pay Now</Button>
-  </CardFooter>
-</Card>
-```
+Shows four metrics: total revenue, pending invoices, paid invoices, and customer count. Each card fetches its own data from the API.
 
 ---
 
-## Custom Components
-
-Located in `app/ui/custom/`.
-
-### Dashboard Components
-
-#### Revenue Chart
+### Revenue Chart
 
 Monthly revenue visualization.
 
 ```tsx
-// ui/custom/dashboard/revenueChart/
-import { RevenueChart } from '@/app/ui/custom/dashboard/revenueChart';
-
-<RevenueChart revenues={revenues} />
-```
-
-#### Latest Invoices
-
-Recent invoices list.
-
-```tsx
-// ui/custom/dashboard/latestInvoices/
-import { LatestInvoices } from '@/app/ui/custom/dashboard/latestInvoices';
-
-<LatestInvoices invoices={latestInvoices} />
-```
-
-#### Metric Cards
-
-Display key metrics.
-
-```tsx
-// ui/custom/dashboard/cards/
-import { Card } from '@/app/ui/custom/dashboard/cards';
-
-<Card
-  title="Total Revenue"
-  value="$45,231.89"
-  icon={<CurrencyIcon />}
-/>
+// app/dashboard/components/dashboard/revenueChart/revenueChart.tsx
+import { RevenueChart } from '@/app/dashboard/components/dashboard/revenueChart/revenueChart';
 ```
 
 ---
 
-### Navigation Components
+### Latest Invoices
 
-#### Theme Toggle
-
-Light/dark mode switch.
+Recent invoices list on the dashboard overview.
 
 ```tsx
-// ui/custom/navigation/themeToggle.tsx
-import { ThemeToggle } from '@/app/ui/custom/navigation/themeToggle';
-
-<ThemeToggle />
-```
-
-#### Side Navigation
-
-Dashboard sidebar.
-
-```tsx
-// ui/custom/navigation/
-import { SideNav } from '@/app/ui/custom/navigation/sideNav';
-
-<SideNav />
+// app/dashboard/components/dashboard/latestInvoices/latestInvoices.tsx
+import { LatestInvoices } from '@/app/dashboard/components/dashboard/latestInvoices/latestInvoices';
 ```
 
 ---
 
-### Auth Components
+### Activity Feed
 
-#### Login Form
-
-Authentication form.
+Real-time activity stream powered by WebSocket. Displayed on the home page.
 
 ```tsx
-// ui/custom/auth/
-import { LoginForm } from '@/app/ui/custom/auth/loginForm';
-
-<LoginForm />
+// app/dashboard/components/activity/activityFeed.tsx
+import { ActivityFeed } from '@/app/dashboard/components/activity/activityFeed';
 ```
+
+Connects to the WebSocket at `/ws` and displays events as they arrive. Initial events are loaded from `GET /api/v1/activity/recent`.
 
 ---
 
-### Invoice Components
+## Invoice Components
 
-#### Invoice Table
+Located in `app/dashboard/invoices/components/`.
 
-Paginated invoice list.
+### Invoice Table
 
-```tsx
-// ui/custom/invoices/table/
-import { InvoiceTable } from '@/app/ui/custom/invoices/table';
-
-<InvoiceTable
-  invoices={invoices}
-  currentPage={page}
-  totalPages={totalPages}
-/>
-```
-
-#### Create Form
-
-Invoice creation form.
+Paginated invoice list with search and actions.
 
 ```tsx
-// ui/custom/invoices/
-import { CreateForm } from '@/app/ui/custom/invoices/createForm';
-
-<CreateForm customers={customers} />
+// app/dashboard/invoices/components/table/tableWithPermission.tsx
 ```
 
-#### Edit Form
+Renders conditionally based on the user's grants — edit and delete buttons are shown only if the user has `dashboard-invoices-update` and `dashboard-invoices-delete` respectively.
 
-Invoice edit form.
+### Search
 
 ```tsx
-// ui/custom/invoices/
-import { EditForm } from '@/app/ui/custom/invoices/editForm';
-
-<EditForm invoice={invoice} customers={customers} />
+// app/dashboard/invoices/components/search.tsx
 ```
+
+Updates the `query` URL parameter on input, triggering a new search request.
+
+### Pagination
+
+```tsx
+// app/dashboard/invoices/components/pagination.tsx
+```
+
+Updates the `page` URL parameter. Total pages are derived from the search response.
 
 ---
 
-### Customer Components
+## Shared Components
 
-#### Customer Dropdown
+Located in `app/shared/components/`.
 
-Customer selection dropdown.
+### Navbar
 
 ```tsx
-// ui/custom/customers/customerDropdown/
-import { CustomerDropdown } from '@/app/ui/custom/customers/customerDropdown';
-
-<CustomerDropdown
-  customers={customers}
-  selected={selectedId}
-  onSelect={handleSelect}
-/>
+// app/shared/components/navigation/navbar.tsx
+import { Navbar } from '@/app/shared/components/navigation/navbar';
 ```
+
+Top navigation bar, includes theme and language toggles.
+
+### Theme Toggle
+
+```tsx
+// app/shared/components/navigation/themeToggle.tsx
+import { ThemeToggle } from '@/app/shared/components/navigation/themeToggle';
+```
+
+Switches between light and dark mode.
+
+### Language Toggle
+
+```tsx
+// app/shared/components/navigation/languageToggle.tsx
+import { LanguageToggle } from '@/app/shared/components/navigation/languageToggle';
+```
+
+Switches the active locale.
 
 ---
 
-### Skeleton Components
+## Auth Components
 
-Loading placeholders.
+Located in `app/auth/components/`.
+
+### Login / Register Form
 
 ```tsx
-// ui/custom/skeletons/
-import {
-  InvoiceTableSkeleton,
-  CardSkeleton,
-  RevenueChartSkeleton
-} from '@/app/ui/custom/skeletons';
-
-// Use in Suspense fallback
-<Suspense fallback={<InvoiceTableSkeleton />}>
-  <InvoiceTable />
-</Suspense>
+// app/auth/components/loginRegister/loginRegisterForm.tsx
 ```
+
+Tabbed form supporting login and registration. Includes a multi-step TOTP flow (setup and verification).
+
+### Role Grants Card
+
+```tsx
+// app/auth/components/roles/roleGrantsCard.tsx
+```
+
+Displays the grants assigned to a role and allows adding new ones.
 
 ---
 
-### Dev Overlay
+## Dev Overlay
 
-Development debugging tools.
+Located in `app/shared/components/devOverlay/`. Only shown in development.
 
-```tsx
-// ui/custom/devOverlay/
-import { ApiConfigOverlay } from '@/app/ui/custom/devOverlay/apiConfigOverlay';
-import { EnvOverlay } from '@/app/ui/custom/devOverlay/envOverlay';
-import { UserOverlay } from '@/app/ui/custom/devOverlay/userOverlay';
-```
+| Component | Description |
+|-----------|-------------|
+| `devOverlay.tsx` | Container toggled with a keyboard shortcut |
+| `apiConfigOverlay.tsx` | Shows and overrides API base URLs |
+| `userOverlay.tsx` | Shows current session/user info |
+| `translationOverlay.tsx` | Shows translation keys for debugging i18n |
 
 ---
 
@@ -258,32 +157,20 @@ import { UserOverlay } from '@/app/ui/custom/devOverlay/userOverlay';
 ### Server vs Client Components
 
 ```tsx
-// Server Component (default)
+// Server Component (default) — can fetch data directly
 export default async function ServerComponent() {
   const data = await fetchData();
   return <div>{data}</div>;
 }
 
-// Client Component
+// Client Component — required for state, effects, and browser APIs
 'use client';
 export function ClientComponent() {
   const [state, setState] = useState();
-  return <button onClick={() => setState()}>Click</button>;
+  return <button onClick={() => setState('clicked')}>Click</button>;
 }
 ```
 
-### Form Actions
+### Permission-Gated Rendering
 
-```tsx
-// Server Action
-async function createInvoice(formData: FormData) {
-  'use server';
-  // Handle form submission
-}
-
-// In component
-<form action={createInvoice}>
-  <input name="amount" type="number" />
-  <button type="submit">Create</button>
-</form>
-```
+Components that depend on grants check the user's session server-side and conditionally render action buttons or redirect to `/auth/unauthorized`.

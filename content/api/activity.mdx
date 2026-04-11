@@ -1,0 +1,51 @@
+# Activity API
+
+Endpoints for retrieving recent activity events. The activity feed is also available over WebSocket for real-time updates.
+
+## Get Recent Activity
+
+Returns recent activity events.
+
+```http
+GET /api/v1/activity/recent?limit=50
+```
+
+### Query Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `limit` | integer | No | 50 | Maximum number of events to return |
+
+### Response
+
+```json
+[
+  {
+    "id": "507f1f77bcf86cd799439011",
+    "type": "INVOICE_CREATED",
+    "message": "Invoice created for John Doe",
+    "timestamp": "2024-01-15T10:30:00Z"
+  }
+]
+```
+
+### TypeScript Type
+
+```typescript
+type ActivityEvent = {
+  id: string;
+  type: string;
+  message: string;
+  timestamp: string;
+}
+```
+
+---
+
+## WebSocket
+
+Real-time activity events are pushed over a WebSocket connection.
+
+**Endpoint**: `ws://localhost:8080/ws`
+
+The frontend subscribes on page load and appends new events to the activity feed as they arrive. The WebSocket stream carries the same `ActivityEvent` shape as the REST endpoint.

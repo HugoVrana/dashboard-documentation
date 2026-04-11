@@ -80,11 +80,15 @@ SockJS provides WebSocket emulation when native WebSocket is unavailable:
 |------|-------------|
 | [Messages & Topics](/websockets/messages) | All message types, payload formats, TypeScript interfaces |
 
+## Endpoints
+
+| Endpoint | Protocol | Description |
+|----------|----------|-------------|
+| `/ws` | Native WebSocket | Used by the frontend activity feed |
+| `/ws-sockjs` | SockJS | Fallback for browsers without native WebSocket |
+
 ## Available Topics
 
-| Topic | Frequency | Description |
-|-------|-----------|-------------|
-| `/topic/metrics` | Every 5s | Live dashboard statistics (invoices, revenue, customers) |
-| `/topic/invoices` | On change | Invoice created, updated, or deleted |
-| `/topic/revenue` | On change | Monthly revenue updates |
-| `/topic/customers` | On change | Customer activity events |
+| Topic | Description |
+|-------|-------------|
+| `/topic/activity` | Real-time activity events (user logins, registrations, invoice changes, etc.) |

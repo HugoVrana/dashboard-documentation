@@ -1,308 +1,169 @@
 # Data Access Layer
 
-Server-side API clients in `app/lib/dataAccess/`.
+API clients are split by feature area. Dashboard API clients live in `app/dashboard/dataAccess/`, auth service clients in `app/auth/dataAccess/`, and shared clients in `app/shared/dataAccess/`.
 
-## Architecture
-
-```
-┌────────────────┐     ┌─────────────────┐     ┌─────────────┐
-│  Server        │────►│  Data Access    │────►│  Backend    │
-│  Component     │     │  Client         │     │  API        │
-└────────────────┘     └─────────────────┘     └─────────────┘
-```
-
-All API calls are made server-side using the access token from the session.
+Each feature has a server client (used in server components and server actions) and, where needed, a browser client (used in client components).
 
 ---
 
-## Invoice Client
+## Dashboard API Clients
+
+### Invoice Clients
 
 ```typescript
-// lib/dataAccess/invoiceServerClient.ts
+// app/dashboard/dataAccess/invoiceServerClient.ts  (server)
+// app/dashboard/dataAccess/invoicesClient.ts       (browser)
 
-// Get all invoices
-export async function getAllInvoices(
-  token: string
-): Promise<InvoiceRead[]>
-
-// Get invoice by ID
-export async function getInvoiceById(
-  id: string,
-  token: string
-): Promise<InvoiceRead>
-
-// Get latest invoices
-export async function getLatestInvoices(
-  token: string,
-  from?: number,
-  to?: number
-): Promise<InvoiceRead[]>
-
-// Get invoice count
-export async function getInvoiceCount(
-  token: string,
-  status?: string
-): Promise<number>
-
-// Get invoice amount total
-export async function getInvoiceAmount(
-  token: string,
-  status?: string
-): Promise<number>
-
-// Get total pages
-export async function getInvoicePages(
-  token: string,
-  searchTerm?: string,
-  size?: number
-): Promise<number>
-
-// Search invoices with pagination
-export async function searchInvoices(
-  request: PageRequest,
-  token: string
-): Promise<PageResponse<InvoiceRead>>
-
-// Create invoice
-export async function createInvoice(
-  invoice: InvoiceCreate,
-  token: string
-): Promise<InvoiceRead>
-
-// Update invoice
-export async function updateInvoice(
-  id: string,
-  invoice: InvoiceUpdate,
-  token: string
-): Promise<InvoiceRead>
-
-// Delete invoice
-export async function deleteInvoice(
-  id: string,
-  token: string
-): Promise<void>
+getAllInvoices(token: string): Promise<InvoiceRead[]>
+getInvoiceById(id: string, token: string): Promise<InvoiceRead>
+getLatestInvoices(token: string, from?: number, to?: number): Promise<InvoiceRead[]>
+getInvoiceCount(token: string, status?: string): Promise<number>
+getInvoiceAmount(token: string, status?: string): Promise<number>
+getInvoicePages(token: string, searchTerm?: string, size?: number): Promise<number>
+searchInvoices(request: PageRequest, token: string): Promise<PageResponse<InvoiceRead>>
+createInvoice(invoice: InvoiceCreate, token: string): Promise<InvoiceRead>
+updateInvoice(id: string, invoice: InvoiceUpdate, token: string): Promise<InvoiceRead>
+deleteInvoice(id: string, token: string): Promise<void>
 ```
 
-### Usage Example
+### Customer Client
 
 ```typescript
-import { searchInvoices } from '@/app/lib/dataAccess/invoiceServerClient';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+// app/dashboard/dataAccess/customersClient.ts
 
-export default async function InvoicesPage({
-  searchParams
-}: {
-  searchParams: { page?: string; query?: string }
-}) {
-  const session = await getServerSession(authOptions);
-  const page = Number(searchParams.page) || 1;
-  const query = searchParams.query || '';
+getAllCustomers(token: string): Promise<CustomerRead[]>
+getCustomerCount(token: string): Promise<number>
+```
 
-  const result = await searchInvoices(
-    { page, size: 10, search: query },
-    session.accessToken
-  );
+### Revenue Client
 
-  return (
-    <InvoiceTable
-      invoices={result.data}
-      totalPages={result.totalPages}
-      currentPage={result.currentPage}
-    />
-  );
-}
+```typescript
+// app/dashboard/dataAccess/revenueClient.ts
+
+getAllRevenues(token: string): Promise<RevenueRead[]>
 ```
 
 ---
 
-## Customer Client
+## Auth Service Clients
+
+### Users
 
 ```typescript
-// Customers are typically fetched via invoice client
-// or a dedicated customersServerClient.ts
+// app/auth/dataAccess/usersServerClient.ts  (server)
+// app/auth/dataAccess/usersClient.ts        (browser)
 
-export async function getAllCustomers(
-  token: string
-): Promise<CustomerRead[]>
+getAllUsers(token: string): Promise<UserAdminRead[]>
+searchUsers(q: string, token: string): Promise<UserAdminRead[]>
+getUserById(id: string, token: string): Promise<UserAdminRead>
+updateUser(id: string, update: UserAdminUpdate, token: string): Promise<UserAdminRead>
+deleteUser(id: string, token: string): Promise<void>
+blockUser(id: string, token: string): Promise<void>
+unblockUser(id: string, token: string): Promise<void>
+resendVerification(id: string, token: string): Promise<void>
+triggerPasswordReset(id: string, token: string): Promise<void>
+```
 
-export async function getCustomerById(
-  id: string,
-  token: string
-): Promise<CustomerRead>
+### Roles
 
-export async function getCustomerCount(
-  token: string
-): Promise<number>
+```typescript
+// app/auth/dataAccess/rolesServerClient.ts  (server)
+// app/auth/dataAccess/rolesClient.ts        (browser)
+
+getAllRoles(token: string): Promise<RoleRead[]>
+getRoleById(id: string, token: string): Promise<RoleRead>
+createRole(role: CreateRole, token: string): Promise<RoleRead>
+updateRole(id: string, update: RoleUpdate, token: string): Promise<RoleRead>
+deleteRole(id: string, token: string): Promise<void>
+addGrantToRole(roleId: string, grantId: string, token: string): Promise<RoleRead>
+removeGrantFromRole(roleId: string, grantId: string, token: string): Promise<RoleRead>
+```
+
+### Grants
+
+```typescript
+// app/auth/dataAccess/grantsServerClient.ts  (server)
+// app/auth/dataAccess/grantsClient.ts        (browser)
+
+getAllGrants(token: string): Promise<GrantRead[]>
+getGrantById(id: string, token: string): Promise<GrantRead>
+createGrant(grant: GrantCreate, token: string): Promise<GrantRead>
+updateGrant(id: string, update: GrantUpdate, token: string): Promise<GrantRead>
+deleteGrant(id: string, token: string): Promise<void>
 ```
 
 ---
 
-## Revenue Client
+## Shared Clients
+
+### Activity Client
 
 ```typescript
-// lib/dataAccess/revenueServerClient.ts (or similar)
+// app/shared/dataAccess/activityClient.ts
 
-export async function getAllRevenues(
-  token: string
-): Promise<RevenueRead[]>
+getRecentActivity(limit?: number): Promise<ActivityEvent[]>
 ```
 
-### Usage
+Used to populate the initial activity feed on the home page before the WebSocket takes over.
+
+### Grafana / Loki
 
 ```typescript
-const revenues = await getAllRevenues(session.accessToken);
+// app/shared/dataAccess/grafanaClient.ts        (browser)
+// app/shared/dataAccess/grafanaServerClient.ts  (server)
 
-// Transform for chart
-const chartData = revenues.map(r => ({
-  month: r.month,
-  revenue: r.revenue
-}));
+pushLogs(streams: LokiStream[]): Promise<void>
 ```
+
+Forwards log entries to Grafana Loki via the `/api/loki` Next.js route proxy.
 
 ---
 
-## Users Client
+## Server Actions
 
-```typescript
-// lib/dataAccess/usersServerClient.ts
+Server actions handle form submissions and mutations. They live in `app/auth/actions/` and `app/dashboard/actions.ts`.
 
-export async function getAllUsers(
-  token: string
-): Promise<UserRead[]>
+### Auth actions (`app/auth/actions/`)
 
-export async function getUserById(
-  id: string,
-  token: string
-): Promise<UserRead>
+| File | Exported actions |
+|------|-----------------|
+| `loginActions.ts` | `initiatePkceAction`, `loginAction`, `completePkceCallbackAction`, `completeMfaLoginAction` |
+| `totpActions.ts` | TOTP setup and verification |
+| `userActions.ts` | Block, unblock, delete, reset password, resend verification |
+| `roleActions.ts` | Create, update, delete roles; add/remove grants |
+| `grantActions.ts` | Create, update, delete grants |
 
-export async function getUserByEmail(
-  email: string,
-  token: string
-): Promise<UserRead>
+### Login flow
 
-export async function searchUsers(
-  request: PageRequest,
-  token: string
-): Promise<PageResponse<UserRead>>
-```
+The login flow uses server actions rather than a direct form POST:
 
----
+1. `initiatePkceAction(url)` — generates a PKCE code verifier, stores the state in an encrypted httpOnly cookie, returns the `request_id` to the login form.
+2. `loginAction(email, password, url, requestId)` — submits credentials to the OAuth2 server. Returns `{ status: 'success', ... }`, `{ status: 'mfa_required' }`, or `{ status: 'error', message }`.
+3. If MFA is required, the MFA token is stored in an encrypted httpOnly cookie and the user is shown the TOTP input. `completeMfaLoginAction(totpCode)` completes the flow.
+4. On success, the access and refresh tokens are stored in the NextAuth session.
 
-## Grafana Client
+### Dashboard actions (`app/dashboard/actions.ts`)
 
-For Loki logging integration.
-
-```typescript
-// lib/dataAccess/grafanaClient.ts
-
-export async function pushLogs(
-  streams: LokiStream[]
-): Promise<void>
-
-// lib/dataAccess/grafanaServerClient.ts
-// Server-side Grafana operations
-```
+Handles invoice create, update, and delete form submissions.
 
 ---
 
-## Permission Client
+## Permission Checking
+
+Grants are flattened into the NextAuth JWT at login time. Permission checks read from the session rather than making API calls:
 
 ```typescript
-// lib/permission/permissionsServerClient.ts
+import { auth } from '@/auth';
 
-export async function hasGrant(
-  grantName: string
-): Promise<boolean>
-
-export async function getUserGrants(): Promise<string[]>
-```
-
-### Usage
-
-```typescript
-import { hasGrant } from '@/app/lib/permission/permissionsServerClient';
-
-export default async function InvoicesPage() {
-  const canCreate = await hasGrant('dashboard-invoices-create');
-  const canDelete = await hasGrant('dashboard-invoices-delete');
+export default async function ProtectedPage() {
+  const session = await auth();
+  const canCreate = session?.user.grants.includes('dashboard-invoices-create');
 
   return (
     <div>
       {canCreate && <CreateButton />}
-      <InvoiceTable canDelete={canDelete} />
+      <InvoiceList />
     </div>
   );
-}
-```
-
----
-
-## Type Validators
-
-Runtime type validation in `app/typeValidators/`.
-
-```typescript
-// typeValidators/invoiceValidator.ts
-
-export function validateInvoiceRead(data: unknown): InvoiceRead {
-  // Validate shape and return typed data
-  // Throws if invalid
-}
-
-export function isInvoiceRead(data: unknown): data is InvoiceRead {
-  // Type guard - returns boolean
-}
-
-export function validateInvoiceArray(data: unknown): InvoiceRead[] {
-  // Validate array of invoices
-}
-```
-
-### Available Validators
-
-| File | Types |
-|------|-------|
-| `invoiceValidator.ts` | InvoiceRead, InvoiceCreate |
-| `customerValidator.ts` | CustomerRead |
-| `revenueValidator.ts` | RevenueRead |
-| `userValidator.ts` | UserRead |
-| `authResponseValidator.ts` | AuthResponse |
-| `roleValidator.ts` | Role |
-| `grantValidator.ts` | Grant |
-| `userInfoValidator.ts` | UserInfo |
-| `pageResponseValidator.ts` | PageResponse |
-| `logValidator.ts` | LogCreate |
-
----
-
-## Error Handling
-
-```typescript
-async function fetchWithAuth<T>(
-  url: string,
-  token: string
-): Promise<T> {
-  const response = await fetch(url, {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    }
-  });
-
-  if (!response.ok) {
-    if (response.status === 401) {
-      throw new Error('Unauthorized');
-    }
-    if (response.status === 403) {
-      throw new Error('Forbidden');
-    }
-    if (response.status === 404) {
-      throw new Error('Not Found');
-    }
-    throw new Error(`HTTP ${response.status}`);
-  }
-
-  return response.json();
 }
 ```

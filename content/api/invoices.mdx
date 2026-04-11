@@ -9,7 +9,7 @@ Retrieves all invoices with customer details.
 **Required Grant**: `dashboard-invoices-read`
 
 ```http
-GET /invoices/
+GET /api/v1/invoices/
 ```
 
 ### Response
@@ -40,7 +40,7 @@ Retrieves a single invoice by ID.
 **Required Grant**: `dashboard-invoices-read`
 
 ```http
-GET /invoices/{id}
+GET /api/v1/invoices/{id}
 ```
 
 ### Path Parameters
@@ -58,7 +58,7 @@ Retrieves the most recent invoices, optionally within a range.
 **Required Grant**: `dashboard-invoices-read`
 
 ```http
-GET /invoices/latest?indexFrom=0&indexTo=5
+GET /api/v1/invoices/latest?indexFrom=0&indexTo=5
 ```
 
 ### Query Parameters
@@ -77,7 +77,7 @@ Returns the count of invoices, optionally filtered by status.
 **Required Grant**: `dashboard-invoices-read`
 
 ```http
-GET /invoices/count?status=pending
+GET /api/v1/invoices/count?status=pending
 ```
 
 ### Query Parameters
@@ -101,7 +101,7 @@ Returns the total amount of invoices, optionally filtered by status.
 **Required Grant**: `dashboard-invoices-read`
 
 ```http
-GET /invoices/amount?status=paid
+GET /api/v1/invoices/amount?status=paid
 ```
 
 ### Query Parameters
@@ -125,7 +125,7 @@ Returns the total number of pages for pagination.
 **Required Grant**: `dashboard-invoices-read`
 
 ```http
-GET /invoices/pages?searchTerm=john&size=15
+GET /api/v1/invoices/pages?searchTerm=john&size=15
 ```
 
 ### Query Parameters
@@ -144,7 +144,7 @@ Search and paginate through invoices.
 **Required Grant**: `dashboard-invoices-read`
 
 ```http
-POST /invoices/search
+POST /api/v1/invoices/search
 Content-Type: application/json
 ```
 
@@ -191,7 +191,7 @@ Creates a new invoice.
 **Required Grant**: `dashboard-invoices-create`
 
 ```http
-POST /invoices/
+POST /api/v1/invoices/
 Content-Type: application/json
 ```
 
@@ -239,7 +239,7 @@ Updates an existing invoice.
 **Required Grant**: `dashboard-invoices-update`
 
 ```http
-PUT /invoices/{id}
+PUT /api/v1/invoices/{id}
 Content-Type: application/json
 ```
 
@@ -255,7 +255,7 @@ Content-Type: application/json
 {
   "status": "paid",
   "amount": 1500.00,
-  "customer_id": "507f1f77bcf86cd799439012"
+  "customerId": "507f1f77bcf86cd799439012"
 }
 ```
 
@@ -268,7 +268,7 @@ Soft-deletes an invoice by setting the `deletedAt` audit field.
 **Required Grant**: `dashboard-invoices-delete`
 
 ```http
-DELETE /invoices/{id}
+DELETE /api/v1/invoices/{id}
 ```
 
 ### Path Parameters
@@ -307,6 +307,6 @@ type InvoiceCreate = {
 type InvoiceUpdate = {
   status: string;
   amount: number;
-  customer_id: string;
+  customerId: string;
 }
 ```

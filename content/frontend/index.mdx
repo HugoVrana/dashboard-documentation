@@ -1,45 +1,55 @@
 # Frontend Overview
 
-The frontend is built with **Next.js 15** using the App Router, **React 19**, **TypeScript**, and **Tailwind CSS**.
+The frontend is built with **Next.js** using the App Router, **React 19**, **TypeScript**, and **Tailwind CSS**.
 
 ## Project Structure
 
 ```
-nextjs-dashboard-frontend/
-├── app/
-│   ├── api/                    # API routes
-│   │   ├── auth/[...nextauth]/ # NextAuth
-│   │   └── loki/               # Logging proxy
-│   ├── auth/                   # Auth pages
-│   │   ├── login/
-│   │   └── unauthorized/
-│   ├── dashboard/              # Dashboard pages
-│   │   ├── (overview)/
-│   │   ├── invoices/
-│   │   └── customers/
-│   ├── lib/                    # Utilities
-│   │   ├── dataAccess/         # API clients
-│   │   ├── permission/         # Auth utilities
-│   │   └── theme/              # Theme context
-│   ├── models/                 # TypeScript types
-│   ├── typeValidators/         # Runtime validation
-│   ├── translations/           # i18n
-│   └── ui/                     # Components
-│       ├── base/               # Base components
-│       └── custom/             # Feature components
-├── public/
-│   └── customers/              # Static assets
-└── next.config.ts
+app/
+├── page.tsx                    # Home page
+├── homeContent.tsx
+├── layout.tsx                  # Root layout
+├── auth/                       # Authentication pages
+│   ├── login/
+│   ├── roles/
+│   ├── unauthorized/
+│   ├── permission/
+│   ├── components/             # Auth-specific components
+│   ├── actions/                # Auth server actions
+│   ├── dataAccess/
+│   ├── hooks/
+│   ├── models/
+│   └── typeValidators/
+├── dashboard/                  # Dashboard pages
+│   ├── (overview)/             # /dashboard route group
+│   ├── invoices/               # Invoice management pages
+│   ├── components/             # Dashboard components
+│   │   ├── dashboard/          # Cards, revenue chart, latest invoices
+│   │   └── activity/           # Activity feed
+│   ├── dataAccess/             # API clients
+│   ├── models/
+│   ├── hooks/
+│   └── actions.ts              # Server actions
+└── shared/                     # Shared across features
+    ├── api/                    # Next.js API routes (Loki proxy)
+    ├── components/             # Shared UI components
+    │   ├── navigation/         # Navbar, language/theme toggles
+    │   └── devOverlay/         # Dev debugging panel
+    ├── dataAccess/             # Shared API clients (activity, Grafana)
+    ├── contexts/               # Theme and translation contexts
+    ├── models/
+    └── i18n/
 ```
 
 ## Key Features
 
-- **Server Components** - Default React Server Components
-- **App Router** - Next.js 15 file-based routing
+- **Server Components** - Default React Server Components with selective client components
+- **App Router** - Next.js file-based routing with route groups
 - **Type Safety** - Full TypeScript coverage
-- **Theming** - Light/dark mode support
+- **Theming** - Light/dark mode via context
 - **i18n** - Internationalization via next-intl
-- **Auth** - NextAuth.js integration
+- **WebSockets** - Real-time activity feed on the home page
+- **Dev Overlay** - In-app panel for inspecting API context, translations, and user info
 
 ## Quick Links
 
@@ -54,10 +64,6 @@ nextjs-dashboard-frontend/
 # API URLs
 NEXT_PUBLIC_API_URL=http://localhost:8080
 NEXT_PUBLIC_AUTH_URL=http://localhost:8081
-
-# NextAuth
-NEXTAUTH_SECRET=your-secret-key
-NEXTAUTH_URL=http://localhost:3000
 
 # Grafana/Loki (optional)
 GRAFANA_URL=http://localhost:3100
@@ -74,7 +80,15 @@ npm run dev
 
 # Build for production
 npm run build
-
-# Start production server
-npm start
 ```
+
+---
+
+## Related Repositories
+
+| Repository | Description |
+|------------|-------------|
+| `dashboard-frontend` | Main frontend application (this repo) |
+| `dashboard-frontend-oauth` | Standalone OAuth2 login app (separate deployment) |
+| `dashboard-frontend-shared` | Shared component library consumed by the other frontends |
+| `dashboard-frontend-starter` | Starter template used as the base for new frontend projects |

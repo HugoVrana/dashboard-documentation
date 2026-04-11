@@ -1,141 +1,177 @@
 # Users API
 
-Endpoints for user management in the Dashboard service.
+User management endpoints are part of the **Auth service** (`http://localhost:8081`), not the Dashboard API.
+
+All endpoints require a valid Bearer token. Write operations require specific admin grants.
+
+---
 
 ## Get All Users
 
-Retrieves all users.
-
-**Required Grant**: `dashboard-users-read`
-
 ```http
-GET /users/
+GET /api/v2/user/
+Authorization: Bearer <access_token>
 ```
 
-### Response
+### Response `200 OK`
 
 ```json
 [
   {
     "id": "507f1f77bcf86cd799439011",
-    "name": "John Doe",
-    "email": "john@example.com"
+    "email": "john@example.com",
+    "emailVerified": true,
+    "emailVerifiedAt": "2024-01-10T09:00:00",
+    "locked": false,
+    "failedLoginAttempts": 0,
+    "profileImageUrl": null,
+    "roles": [{ "id": "...", "name": "admin", "grants": [] }],
+    "createdAt": "2024-01-01T00:00:00Z",
+    "deletedAt": null
   }
 ]
 ```
 
 ---
 
-## Get User by ID
-
-Retrieves a single user by their ID.
-
-**Required Grant**: `dashboard-users-read`
-
-```http
-GET /users/{id}
-```
-
-### Path Parameters
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `id` | string | 24-character hex ObjectId |
-
-### Response
-
-```json
-{
-  "id": "507f1f77bcf86cd799439011",
-  "name": "John Doe",
-  "email": "john@example.com"
-}
-```
-
-### Errors
-
-| Code | Description |
-|------|-------------|
-| `404` | User not found or invalid ID |
-
----
-
-## Get User by Email
-
-Retrieves a user by their email address.
-
-**Required Grant**: `dashboard-users-read`
-
-```http
-GET /users/email/{email}
-```
-
-### Path Parameters
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `email` | string | Valid email address |
-
-### Response
-
-```json
-{
-  "id": "507f1f77bcf86cd799439011",
-  "name": "John Doe",
-  "email": "john@example.com"
-}
-```
-
----
-
 ## Search Users
 
-Search and paginate through users.
-
-**Required Grant**: `dashboard-users-create`
+Case-insensitive partial match on email.
 
 ```http
-POST /users/search
+GET /api/v2/user/search?q=john
+Authorization: Bearer <access_token>
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `q` | string | Yes | Search query matched against email |
+
+---
+
+## Get User by ID
+
+```http
+GET /api/v2/user/{id}
+Authorization: Bearer <access_token>
+```
+
+Returns `404` if not found.
+
+---
+
+## Update User
+
+**Required Grant**: `dashboard-oauth-user-update`
+
+```http
+PUT /api/v2/user/{id}
+Authorization: Bearer <access_token>
 Content-Type: application/json
 ```
 
-### Request Body
-
 ```json
 {
-  "page": 1,
-  "size": 15,
-  "search": "john"
+  "email": "newemail@example.com"
 }
 ```
 
-### Response
-
-```json
-{
-  "data": [
-    {
-      "id": "507f1f77bcf86cd799439011",
-      "name": "John Doe",
-      "email": "john@example.com"
-    }
-  ],
-  "totalPages": 1,
-  "currentPage": 1,
-  "itemsPerPage": 15
-}
-```
-
-Returns `204 No Content` if no users match the search.
+Returns the updated `UserAdminRead`. `409` if the email is already in use.
 
 ---
 
-## TypeScript Type
+## Delete User
+
+Soft-deletes the user account.
+
+**Required Grant**: `dashboard-oauth-user-delete`
+
+```http
+DELETE /api/v2/user/{id}
+Authorization: Bearer <access_token>
+```
+
+Returns `204 No Content`.
+
+---
+
+## Block User
+
+Locks the account, preventing login.
+
+**Required Grant**: `dashboard-oauth-user-block`
+
+```http
+POST /api/v2/user/{id}/block
+Authorization: Bearer <access_token>
+```
+
+Returns `204 No Content`. `409` if already blocked.
+
+---
+
+## Unblock User
+
+Unlocks the account and resets failed login attempt counter.
+
+**Required Grant**: `dashboard-oauth-user-block`
+
+```http
+POST /api/v2/user/{id}/unblock
+Authorization: Bearer <access_token>
+```
+
+Returns `204 No Content`. `409` if not blocked.
+
+---
+
+## Resend Verification Email
+
+Queues a new verification email (sent on the next scheduler run).
+
+**Required Grant**: `dashboard-oauth-user-resend-verification`
+
+```http
+POST /api/v2/user/{id}/resend-verification
+Authorization: Bearer <access_token>
+```
+
+Returns `204 No Content`. `409` if email is already verified.
+
+---
+
+## Trigger Password Reset
+
+Queues a password reset email for the user (sent on the next scheduler run).
+
+**Required Grant**: `dashboard-oauth-user-reset-password`
+
+```http
+POST /api/v2/user/{id}/reset-password
+Authorization: Bearer <access_token>
+```
+
+Returns `204 No Content`.
+
+---
+
+## TypeScript Types
 
 ```typescript
-type UserRead = {
+type UserAdminRead = {
   id: string;
-  name: string;
   email: string;
+  emailVerified: boolean;
+  emailVerifiedAt: string | null;
+  locked: boolean;
+  failedLoginAttempts: number;
+  profileImageUrl: string | null;
+  roles: RoleRead[];
+  createdAt: string;
+  deletedAt: string | null;
+}
+
+type UserAdminUpdate = {
+  email?: string;
 }
 ```

@@ -1,7 +1,15 @@
 {
   "permissions": {
     "allow": [
-      "WebFetch(domain:gitlab.com)"
+      "WebFetch(domain:gitlab.com)",
+      "Read(//Users/hugvra/IdeaProjects/dashboard/dashboard-frontend/src/**)",
+      "Read(//Users/hugvra/IdeaProjects/dashboard/dashboard-spring-data/src/main/java/**)",
+      "Bash(for f in /Users/hugvra/IdeaProjects/dashboard/dashboard-documentation/content/authentication/endpoints/*)",
+      "Bash(do echo \"=== $f ===\")",
+      "Read(//Users/hugvra/IdeaProjects/dashboard/dashboard-documentation/**)",
+      "Bash(done)",
+      "Bash(for f in /Users/hugvra/IdeaProjects/dashboard/dashboard-spring-data/src/main/java/com/dashboard/model/entities/*.java)",
+      "Bash(for f in /Users/hugvra/IdeaProjects/dashboard/dashboard-documentation/content/database/*.mdx /Users/hugvra/IdeaProjects/dashboard/dashboard-documentation/content/websockets/*.mdx)"
     ]
   }
 }

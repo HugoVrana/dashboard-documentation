@@ -8,11 +8,15 @@ Stores customer information.
 
 ```typescript
 {
-  _id: ObjectId,
+  _id: string,
   name: string,
-  email: string,
-  image_url: string,
-  audit: Audit
+  email: string,      // unique index
+  imageId?: string,   // reference to uploaded image (optional)
+  audit: {
+    createdAt: string,
+    updatedAt: string,
+    deletedAt: string | null
+  }
 }
 ```
 
@@ -20,9 +24,11 @@ Stores customer information.
 |-------|------|----------|-------------|
 | `_id` | ObjectId | Yes | Primary key |
 | `name` | string | Yes | Customer full name |
-| `email` | string | Yes | Email address |
-| `image_url` | string | No | Avatar image path |
+| `email` | string | Yes | Unique email address |
+| `imageId` | ObjectId | No | ObjectId of the uploaded profile image |
 | `audit` | Audit | Yes | Timestamps |
+
+> **Note**: `imageId` stores a reference to an object in cloud storage (R2). The resolved public URL is returned as `image_url` in API responses by the mapper layer.
 
 ### Example Document
 
@@ -31,7 +37,7 @@ Stores customer information.
   "_id": { "$oid": "507f1f77bcf86cd799439011" },
   "name": "John Doe",
   "email": "john@example.com",
-  "image_url": "/customers/john-doe.png",
+  "imageId": { "$oid": "507f1f77bcf86cd799439099" },
   "audit": {
     "createdAt": { "$date": "2024-01-15T10:30:00Z" },
     "updatedAt": { "$date": "2024-01-15T10:30:00Z" },
@@ -48,12 +54,16 @@ Stores invoice records with references to customers.
 
 ```typescript
 {
-  _id: ObjectId,
-  customer: DBRef<Customer>,
-  amount: Double,
-  date: LocalDate,
-  status: string,
-  audit: Audit
+  _id: string,
+  customer: { $ref: string; $id: string },  // DBRef to customers
+  amount: number,
+  date: string,     // ISO 8601 date string e.g. "2024-01-15"
+  status: 'pending' | 'paid',
+  audit: {
+    createdAt: string,
+    updatedAt: string,
+    deletedAt: string | null
+  }
 }
 ```
 
@@ -97,22 +107,29 @@ Stores invoice records with references to customers.
 
 ## revenues
 
-Stores monthly revenue aggregations for dashboard charts.
+Stores monthly revenue aggregations for dashboard charts. Has a compound unique index on `(month, year)`.
 
 ```typescript
 {
-  _id: ObjectId,
-  month: string,
-  revenue: Double,
-  audit: Audit
+  _id: string,
+  month: 'JANUARY' | 'FEBRUARY' | 'MARCH' | 'APRIL' | 'MAY' | 'JUNE'
+       | 'JULY' | 'AUGUST' | 'SEPTEMBER' | 'OCTOBER' | 'NOVEMBER' | 'DECEMBER',
+  year: number,   // 2000–9999
+  revenue: number,
+  audit: {
+    createdAt: string,
+    updatedAt: string,
+    deletedAt: string | null
+  }
 }
 ```
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `_id` | ObjectId | Yes | Primary key |
-| `month` | string | Yes | Month name (e.g., "Jan") |
-| `revenue` | Double | Yes | Total revenue |
+| `month` | string (enum) | Yes | Month name e.g. `"JANUARY"` |
+| `year` | integer | Yes | 4-digit year (2000–9999) |
+| `revenue` | Decimal | Yes | Total revenue for that month |
 | `audit` | Audit | Yes | Timestamps |
 
 ### Example Document
@@ -120,7 +137,8 @@ Stores monthly revenue aggregations for dashboard charts.
 ```json
 {
   "_id": { "$oid": "507f1f77bcf86cd799439013" },
-  "month": "Jan",
+  "month": "JANUARY",
+  "year": 2024,
   "revenue": 15000.00,
   "audit": {
     "createdAt": { "$date": "2024-01-31T23:59:59Z" },
@@ -132,40 +150,28 @@ Stores monthly revenue aggregations for dashboard charts.
 
 ---
 
-## users
+## invoices_search
 
-Stores user account information (separate from OAuth users).
+A denormalised search index kept in sync with the `invoices` collection. Used to power the paginated invoice search with MongoDB text indexes across invoice and customer fields.
 
 ```typescript
 {
-  _id: ObjectId,
-  name: string,
-  email: string,
-  password: string,
-  audit: Audit
+  _id: string,
+  invoiceId: string,        // reference to invoices._id (indexed)
+  customerId: string,       // reference to customers._id (indexed)
+  amount: number,
+  date: string,             // ISO 8601 date string
+  status: string,           // text-indexed, weight 2
+  customerName: string,     // text-indexed, weight 3
+  customerEmail: string,    // text-indexed, weight 2
+  customerImageUrl: string,
+  deletedAt: string | null,
+  lastSyncedAt: string | null
 }
 ```
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `_id` | ObjectId | Yes | Primary key |
-| `name` | string | Yes | User full name |
-| `email` | string | Yes | Email address |
-| `password` | string | Yes | Hashed password |
-| `audit` | Audit | Yes | Timestamps |
-
-### Example Document
-
-```json
-{
-  "_id": { "$oid": "507f1f77bcf86cd799439014" },
-  "name": "Admin User",
-  "email": "admin@example.com",
-  "password": "$2a$10$...",
-  "audit": {
-    "createdAt": { "$date": "2024-01-01T00:00:00Z" },
-    "updatedAt": { "$date": "2024-01-01T00:00:00Z" },
-    "deletedAt": null
-  }
-}
-```
+| Index | Fields | Type |
+|-------|--------|------|
+| `customer_idx` | `customerId` | Compound |
+| `deletedAt_idx` | `deletedAt` | Compound |
+| text index | `status`, `customerName`, `customerEmail` | Text |

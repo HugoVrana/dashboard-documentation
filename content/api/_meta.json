@@ -3,5 +3,6 @@
   "customers": "Customers",
   "invoices": "Invoices",
   "revenues": "Revenues",
+  "activity": "Activity",
   "users": "Users"
 }

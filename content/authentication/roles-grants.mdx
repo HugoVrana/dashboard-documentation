@@ -1,104 +1,153 @@
 # Roles & Grants
 
-## Role Management
+All role and grant endpoints are on the Auth service (`http://localhost:8081`) and require a valid Bearer token.
 
-### Create Role
+---
+
+## Roles
+
+### Get all roles
 
 ```http
-POST /api/role/
-Content-Type: application/json
+GET /api/v2/role/
+Authorization: Bearer <access_token>
 ```
 
-#### Request
+### Response `200 OK`
 
 ```json
-{
-  "name": "admin"
-}
-```
-
-#### Response `200 OK`
-
-```json
-{
-  "id": "507f1f77bcf86cd799439011",
-  "name": "admin",
-  "grants": []
-}
+[
+  {
+    "id": "507f1f77bcf86cd799439011",
+    "name": "admin",
+    "grants": [
+      { "id": "507f1f77bcf86cd799439012", "name": "dashboard-invoices-read", "description": "Read invoice data" }
+    ]
+  }
+]
 ```
 
 ---
 
-### Add Grant to Role
+### Get role by ID
 
 ```http
-POST /api/role/grant
-Content-Type: application/json
-```
-
-#### Request
-
-```json
-{
-  "roleId": "507f1f77bcf86cd799439011",
-  "grantId": "507f1f77bcf86cd799439012"
-}
-```
-
-#### Response `200 OK`
-
-```json
-{
-  "id": "507f1f77bcf86cd799439011",
-  "name": "admin",
-  "grants": [
-    {
-      "id": "507f1f77bcf86cd799439012",
-      "name": "dashboard-invoices-read",
-      "description": "Read invoice data"
-    }
-  ]
-}
+GET /api/v2/role/{id}
+Authorization: Bearer <access_token>
 ```
 
 ---
 
-### Remove Grant from Role
+### Create role
+
+**Required Grant**: `dashboard-oauth-role-create`
 
 ```http
-DELETE /api/role/grant
+POST /api/v2/role/
+Authorization: Bearer <access_token>
 Content-Type: application/json
 ```
 
-#### Request
-
 ```json
-{
-  "roleId": "507f1f77bcf86cd799439011",
-  "grantId": "507f1f77bcf86cd799439012"
-}
+{ "name": "accountant" }
 ```
 
-#### Response `200 OK`
-
-```json
-1
-```
-
-Returns count of removed grants.
+Returns the created `RoleRead` object. `409` if a role with that name already exists.
 
 ---
 
-## Grant Management
+### Update role
 
-### Create Grant
+**Required Grant**: `dashboard-oauth-role-update`
 
 ```http
-POST /api/grant/
+PUT /api/v2/role/{id}
+Authorization: Bearer <access_token>
 Content-Type: application/json
 ```
 
-#### Request
+```json
+{ "name": "senior-accountant" }
+```
+
+---
+
+### Delete role
+
+**Required Grant**: `dashboard-oauth-role-delete`
+
+```http
+DELETE /api/v2/role/{id}
+Authorization: Bearer <access_token>
+```
+
+Returns `204 No Content`.
+
+---
+
+### Add grant to role
+
+**Required Grant**: `dashboard-oauth-role-manage-grants`
+
+```http
+POST /api/v2/role/{id}/grants/{grantId}
+Authorization: Bearer <access_token>
+```
+
+Returns the updated `RoleRead`. `409` if the grant is already assigned.
+
+---
+
+### Remove grant from role
+
+**Required Grant**: `dashboard-oauth-role-manage-grants`
+
+```http
+DELETE /api/v2/role/{id}/grants/{grantId}
+Authorization: Bearer <access_token>
+```
+
+Returns the updated `RoleRead`.
+
+---
+
+## Grants
+
+### Get all grants
+
+```http
+GET /api/v2/grant/
+Authorization: Bearer <access_token>
+```
+
+### Response `200 OK`
+
+```json
+[
+  { "id": "507f1f77bcf86cd799439012", "name": "dashboard-invoices-read", "description": "Read invoice data" }
+]
+```
+
+---
+
+### Get grant by ID
+
+```http
+GET /api/v2/grant/{id}
+Authorization: Bearer <access_token>
+```
+
+---
+
+### Create grant
+
+**Required Grant**: `dashboard-oauth-grant-create`
+
+```http
+POST /api/v2/grant/
+Authorization: Bearer <access_token>
+Content-Type: application/json
+```
 
 ```json
 {
@@ -107,13 +156,55 @@ Content-Type: application/json
 }
 ```
 
-#### Response `200 OK`
+`409` if a grant with that name already exists.
+
+---
+
+### Update grant
+
+**Required Grant**: `dashboard-oauth-grant-update`
+
+```http
+PUT /api/v2/grant/{id}
+Authorization: Bearer <access_token>
+Content-Type: application/json
+```
 
 ```json
 {
-  "id": "507f1f77bcf86cd799439012",
   "name": "dashboard-invoices-read",
-  "description": "Permission to read invoice data"
+  "description": "Updated description"
+}
+```
+
+---
+
+### Delete grant
+
+**Required Grant**: `dashboard-oauth-grant-delete`
+
+```http
+DELETE /api/v2/grant/{id}
+Authorization: Bearer <access_token>
+```
+
+Returns `204 No Content`.
+
+---
+
+## TypeScript Types
+
+```typescript
+type GrantRead = {
+  id: string;
+  name: string;
+  description: string;
+}
+
+type RoleRead = {
+  id: string;
+  name: string;
+  grants: GrantRead[];
 }
 ```
 
@@ -121,61 +212,73 @@ Content-Type: application/json
 
 ## Standard Grants
 
+### Dashboard API grants
+
 | Grant | Description |
 |-------|-------------|
 | `dashboard-customers-read` | Read customer data |
+| `dashboard-customers-create` | Create customers |
+| `dashboard-customers-update` | Update customers and upload images |
+| `dashboard-customers-delete` | Delete customers |
 | `dashboard-invoices-read` | Read invoice data |
 | `dashboard-invoices-create` | Create new invoices |
 | `dashboard-invoices-update` | Update existing invoices |
 | `dashboard-invoices-delete` | Delete invoices |
 | `dashboard-revenue-read` | Read revenue data |
-| `dashboard-users-read` | Read user data |
-| `dashboard-users-create` | Create/search users |
+
+### Auth service admin grants
+
+| Grant | Description |
+|-------|-------------|
+| `dashboard-oauth-user-update` | Update user details |
+| `dashboard-oauth-user-delete` | Delete users |
+| `dashboard-oauth-user-block` | Block and unblock users |
+| `dashboard-oauth-user-resend-verification` | Resend verification email |
+| `dashboard-oauth-user-reset-password` | Trigger password reset for a user |
+| `dashboard-oauth-role-create` | Create roles |
+| `dashboard-oauth-role-update` | Update roles |
+| `dashboard-oauth-role-delete` | Delete roles |
+| `dashboard-oauth-role-manage-grants` | Add/remove grants on roles |
+| `dashboard-oauth-grant-create` | Create grants |
+| `dashboard-oauth-grant-update` | Update grants |
+| `dashboard-oauth-grant-delete` | Delete grants |
+| `dashboard-oauth-client-create` | Register OAuth clients |
+| `dashboard-oauth-client-delete` | Delete OAuth clients |
 
 ---
 
 ## Example Role Configurations
 
-### Admin Role
-
-Full access to all features.
+### Admin
 
 ```json
 {
   "name": "admin",
   "grants": [
-    "dashboard-customers-read",
-    "dashboard-invoices-read",
-    "dashboard-invoices-create",
-    "dashboard-invoices-update",
-    "dashboard-invoices-delete",
+    "dashboard-customers-read", "dashboard-customers-create", "dashboard-customers-update", "dashboard-customers-delete",
+    "dashboard-invoices-read", "dashboard-invoices-create", "dashboard-invoices-update", "dashboard-invoices-delete",
     "dashboard-revenue-read",
-    "dashboard-users-read",
-    "dashboard-users-create"
+    "dashboard-oauth-user-update", "dashboard-oauth-user-delete", "dashboard-oauth-user-block",
+    "dashboard-oauth-role-create", "dashboard-oauth-role-update", "dashboard-oauth-role-delete", "dashboard-oauth-role-manage-grants",
+    "dashboard-oauth-grant-create", "dashboard-oauth-grant-update", "dashboard-oauth-grant-delete"
   ]
 }
 ```
 
-### Accountant Role
-
-Invoice and revenue management.
+### Accountant
 
 ```json
 {
   "name": "accountant",
   "grants": [
     "dashboard-customers-read",
-    "dashboard-invoices-read",
-    "dashboard-invoices-create",
-    "dashboard-invoices-update",
+    "dashboard-invoices-read", "dashboard-invoices-create", "dashboard-invoices-update",
     "dashboard-revenue-read"
   ]
 }
 ```
 
-### Viewer Role
-
-Read-only access.
+### Viewer
 
 ```json
 {
@@ -187,28 +290,3 @@ Read-only access.
   ]
 }
 ```
-
----
-
-## JWT Structure
-
-Access tokens contain user grants:
-
-```json
-{
-  "sub": "user@example.com",
-  "iat": 1704067200,
-  "exp": 1704070800,
-  "grants": [
-    "dashboard-invoices-read",
-    "dashboard-customers-read"
-  ]
-}
-```
-
-| Claim | Type | Description |
-|-------|------|-------------|
-| `sub` | string | User email |
-| `iat` | number | Issued at (Unix timestamp) |
-| `exp` | number | Expiration (Unix timestamp) |
-| `grants` | string[] | User permissions |
