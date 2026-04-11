@@ -8,17 +8,17 @@ Embedded document for tracking entity lifecycle.
 
 ```typescript
 {
-  createdAt: Instant,
-  updatedAt: Instant,
-  deletedAt: Instant    // null if not deleted
+  createdAt: string,        // ISO 8601 timestamp
+  updatedAt: string,
+  deletedAt: string | null  // null if not deleted
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `createdAt` | Instant | When entity was created |
-| `updatedAt` | Instant | Last modification time |
-| `deletedAt` | Instant | Soft delete marker (null = active) |
+| `createdAt` | string | ISO 8601 timestamp — when entity was created |
+| `updatedAt` | string | ISO 8601 timestamp — last modification time |
+| `deletedAt` | string \| null | Soft delete marker (null = active) |
 
 ### Java Definition
 
@@ -71,14 +71,14 @@ Used for email verification and password reset flows.
 ```typescript
 {
   token: string,
-  expiresAt: Instant
+  expiresAt: string   // ISO 8601 timestamp
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `token` | string | Random secure token |
-| `expiresAt` | Instant | Token expiration time |
+| `expiresAt` | string | ISO 8601 timestamp — token expiration time |
 
 ### Java Definition
 
