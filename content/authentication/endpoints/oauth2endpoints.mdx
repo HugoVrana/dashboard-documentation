@@ -375,12 +375,32 @@ Authorization: Bearer <access_token>
 
 ### Rotate client secret
 
+**Required Grant**: `dashboard-oauth-client-rotate-secret`
+
 ```http
 POST /api/v2/oauthclients/{id}/secret
 Authorization: Bearer <access_token>
 ```
 
 Invalidates the old secret immediately. Returns a new `OAuthClientCreated` with the new secret. **Shown only once.**
+
+### Get allowed hosts
+
+Returns the list of allowed CORS origins for a client. No authentication required.
+
+```http
+GET /api/v2/oauthclients/{id}/allowed-hosts
+```
+
+### Response `200 OK`
+
+```json
+["http://localhost:3000", "https://app.example.com"]
+```
+
+| Code | Description |
+|------|-------------|
+| `404` | Client not found |
 
 ---
 
